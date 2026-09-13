@@ -1,5 +1,4 @@
 void initialize(){
-
   pinMode(inA, OUTPUT);
   pinMode(inB, OUTPUT);
   pinMode(inC, OUTPUT);
@@ -20,7 +19,11 @@ void initialize(){
 
   lastSensor = 0;
   prevError = 0;
-
+  gapCounter = 0;
+  stopBoxCounter = 0;
+  invertFilter = 0;
+  navState = STATE_NORMAL;
+  turnTicks = 0;
+  isInverted = false;
+  isStopped = false;
 }
-
-

@@ -35,6 +35,17 @@ void wheel(int leftSpeed, int rightSpeed){
   analogWrite(enA, abs(rightSpeed));
 }
 
+void brake(){
+  // Active dynamic brake (shorts motor terminals to clamp back-EMF)
+  digitalWrite(inA, HIGH);
+  digitalWrite(inB, HIGH);
+  digitalWrite(inC, HIGH);
+  digitalWrite(inD, HIGH);
+  analogWrite(enA, 255);
+  analogWrite(enB, 255);
+}
+
+
 
 
 

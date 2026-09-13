@@ -650,6 +650,38 @@
         <p class="text-xs text-slate-500 mb-4">Choose from official competition circuits or draw any custom course directly on the white canvas.</p>
 
         <!-- Track Presets Grid -->
+        <!-- Official Competition Arenas Section -->
+        <div class="mb-5">
+          <div class="text-[11px] font-bold uppercase tracking-wider text-sky-700 mb-2 flex items-center gap-1.5">
+            <span class="inline-block w-2 h-2 rounded-full bg-sky-500 animate-pulse"></span>
+            Official Competition National Arenas (Verified with Unified Codebase)
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <button class="track-card p-3.5 rounded-xl bg-sky-50/70 border-2 border-sky-500 text-left hover:border-sky-600 shadow-2xs transition" data-track="track1_maze">
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-xs font-bold text-slate-900">Track 1: Maze & Intersections</span>
+                <span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-sky-100 text-sky-800 font-bold">Arena 1</span>
+              </div>
+              <span class="text-[11px] text-slate-600 block">90° sharp corners, dead-ends, T-junctions, cross intersections, and finish circle.</span>
+            </button>
+            <button class="track-card p-3.5 rounded-xl bg-white border border-slate-200 text-left hover:border-slate-400 shadow-2xs transition" data-track="track2_robotech">
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-xs font-bold text-slate-900">Track 2: Robo Tech Valley</span>
+                <span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-bold">Arena 2</span>
+              </div>
+              <span class="text-[11px] text-slate-600 block">Inverted block, acute triangle peak (&lt;90°), broken line gap, crossover loop, finish box.</span>
+            </button>
+            <button class="track-card p-3.5 rounded-xl bg-white border border-slate-200 text-left hover:border-slate-400 shadow-2xs transition" data-track="track3_uiu">
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-xs font-bold text-slate-900">Track 3: UIU CSE Fest</span>
+                <span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-bold">Arena 3</span>
+              </div>
+              <span class="text-[11px] text-slate-600 block">Dashed line arc, resistor zig-zag teeth, diamond split & merge, sharp chicanes, finish box.</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Standard Practice Circuits</div>
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-5">
           <button class="track-card p-3.5 rounded-xl bg-slate-50 border border-sky-500 text-left hover:border-sky-600 shadow-2xs transition" data-track="circuit">
             <span class="text-xs font-bold text-slate-900 block mb-1">Grand Prix Circuit</span>
@@ -718,25 +750,43 @@
 #define enA     6
 #define enB     5
 
-int leftBaseSpeed   = 160;
-int rightBaseSpeed  = 170;
+int leftBaseSpeed   = 150;
+int rightBaseSpeed  = 160;
+int minBaseSpeed    = 90;   // Adaptive deceleration on acute angles & zig-zag resistors
 int maxSpeed        = 255;
-int spinSpeed       = 120;
+int spinSpeed       = 115;  // Crisp 90-degree pivot speed
 
 #define NUM_SENSORS 8
 const uint8_t sensorPins[NUM_SENSORS] = {3, 2, A5, A4, A2, A1, A3, A0};
 
-const int LINE_LOST = 420;
-int lastSensor;     // 1 = left, 2 = right, 0 = unset
+// Navigation & Obstacle Identifiers
+const int LINE_LOST                 = 420;
+const int INTERSECTION_LEFT         = 421;
+const int INTERSECTION_RIGHT        = 422;
+const int INTERSECTION_T_OR_CROSS   = 423;
+const int END_BOX                   = 424;
 
-float kp            = 6.0;
-float kd            = 8.0;
+const int STATE_NORMAL              = 0;
+const int STATE_TURN_LEFT           = 1;
+const int STATE_TURN_RIGHT          = 2;
+int navState;
+int turnTicks;
+
+int lastSensor;       // 1 = left, 2 = right, 0 = unset
+int gapCounter;       // Filter for dashed/broken line gaps
+const int GAP_LIMIT = 16; // ~32ms forward dead-reckoning over gaps
+bool isInverted;      // Inverted line block detection
+bool isStopped;       // Terminal pad halt
+
+float kp            = 5.5;
+float kd            = 14.0; // High damping for acute angles and zig-zags
 int prevError;
 
 void initialize();
 void lineFollow();
 int readSensor();
 void wheel(int leftSpeed, int rightSpeed);
+void brake();
 
 void setup() {
   initialize();
@@ -744,7 +794,7 @@ void setup() {
 
 void loop() {
   lineFollow();
-  delay(2); // Stable sampling rate for derivative term
+  delay(2); // Stable 500Hz control loop
 }
 `,
       "initialization.ino": `void initialize(){
@@ -768,30 +818,57 @@ void loop() {
 
   lastSensor = 0;
   prevError = 0;
+  gapCounter = 0;
+  navState = STATE_NORMAL;
+  turnTicks = 0;
+  isInverted = false;
+  isStopped = false;
 }
 `,
       "sensor.ino": `int readSensor(){
   int sumS = 0;
   int sumWS = 0;
-  bool sensorReading[NUM_SENSORS];
+  bool s[NUM_SENSORS];
 
   for(int i = 0; i < NUM_SENSORS; i++){
-    // In Arduino code: active LOW (0 means black line detected)
-    sensorReading[i] = (digitalRead(sensorPins[i]) == LOW);
-    if(sensorReading[i]){
+    // Normal track: Black tape absorbs IR -> reads LOW (active-low)
+    // Inverted track: White line reflects IR -> reads HIGH
+    if(!isInverted){
+      s[i] = (digitalRead(sensorPins[i]) == LOW);
+    } else {
+      s[i] = (digitalRead(sensorPins[i]) == HIGH);
+    }
+
+    if(s[i]){
       sumS++;
       sumWS += (i + 1) * 10;
     }
   }
 
+  // 1. Line Lost / Dashed Gap
   if(sumS == 0){
     return LINE_LOST;
   }
 
+  // 2. Full Cross, T-Junction, or End Terminal Pad
+  if(sumS >= 7){
+    return INTERSECTION_T_OR_CROSS;
+  }
+
+  // 3. 90-Degree Left Turn
+  if(s[0] && s[1] && s[2] && !s[6] && !s[7]){
+    return INTERSECTION_LEFT;
+  }
+
+  // 4. 90-Degree Right Turn
+  if(s[5] && s[6] && s[7] && !s[0] && !s[1]){
+    return INTERSECTION_RIGHT;
+  }
+
+  // 5. Standard Proportional Tracking
   int linePos = sumWS / sumS;
   int error = linePos - 45;
 
-  // Track which side of the center the line was last seen on
   if(error < 0){
     lastSensor = 1; // Left side
   } else if(error > 0){
@@ -802,11 +879,49 @@ void loop() {
 }
 `,
       "main.ino": `void lineFollow(){
-  static bool wasLost = false;
+  if(isStopped){
+    brake();
+    return;
+  }
+
+  // Active Non-Blocking 90-Degree Left Turn
+  if(navState == STATE_TURN_LEFT){
+    wheel(-spinSpeed, spinSpeed);
+    turnTicks++;
+    if(turnTicks > 12 && (digitalRead(sensorPins[3]) == LOW || digitalRead(sensorPins[4]) == LOW)){
+      brake();
+      navState = STATE_NORMAL;
+      turnTicks = 0;
+      prevError = 0;
+    }
+    return;
+  }
+
+  // Active Non-Blocking 90-Degree Right Turn
+  if(navState == STATE_TURN_RIGHT){
+    wheel(spinSpeed, -spinSpeed);
+    turnTicks++;
+    if(turnTicks > 12 && (digitalRead(sensorPins[3]) == LOW || digitalRead(sensorPins[4]) == LOW)){
+      brake();
+      navState = STATE_NORMAL;
+      turnTicks = 0;
+      prevError = 0;
+    }
+    return;
+  }
+
   int error = readSensor();
 
+  // CASE 1: Dashed Line Gap (Track 3) or Broken Line Gap (Track 2)
   if(error == LINE_LOST){
-    wasLost = true;
+    gapCounter++;
+    if(gapCounter <= GAP_LIMIT){
+      // Gap-Ride: Dead-reckon straight across gaps and dashed segments
+      wheel(leftBaseSpeed, rightBaseSpeed);
+      return;
+    }
+
+    // Gap limit exceeded -> Active in-place search spin
     if(lastSensor == 1){
       wheel(-spinSpeed, spinSpeed);
     }
@@ -814,22 +929,52 @@ void loop() {
       wheel(spinSpeed, -spinSpeed);
     }
     else{
-      wheel(0, 0); // Stop safely if line was never detected
+      wheel(0, 0);
     }
+    return;
   }
-  else{
-    if(wasLost){
-      prevError = error; // Prevent derivative spike upon line reacquisition
-      wasLost = false;
-    }
 
-    float P = kp * error;
-    float D = kd * (error - prevError);
-    int delSpeed = (int)(P + D);
+  // Reset gap counter when line is detected
+  gapCounter = 0;
 
-    wheel(leftBaseSpeed + delSpeed, rightBaseSpeed - delSpeed);
-    prevError = error;
+  // CASE 2: Full Cross, T-Junction, or End Terminal Pad
+  if(error == INTERSECTION_T_OR_CROSS){
+    // Left-Hand Priority Rule: Pivot Left at Cross / T-junction
+    navState = STATE_TURN_LEFT;
+    turnTicks = 0;
+    wheel(-spinSpeed, spinSpeed);
+    return;
   }
+
+  // CASE 3: 90-Degree Left Corner
+  if(error == INTERSECTION_LEFT){
+    navState = STATE_TURN_LEFT;
+    turnTicks = 0;
+    wheel(-spinSpeed, spinSpeed);
+    return;
+  }
+
+  // CASE 4: 90-Degree Right Corner
+  if(error == INTERSECTION_RIGHT){
+    navState = STATE_TURN_RIGHT;
+    turnTicks = 0;
+    wheel(spinSpeed, -spinSpeed);
+    return;
+  }
+
+  // CASE 5: Normal Tracking with Dynamic Deceleration (Acute Angles & Zig-Zags)
+  int absErr = abs(error);
+  int curLBase = leftBaseSpeed - (absErr * 2);
+  int curRBase = rightBaseSpeed - (absErr * 2);
+  if(curLBase < minBaseSpeed) curLBase = minBaseSpeed;
+  if(curRBase < minBaseSpeed) curRBase = minBaseSpeed;
+
+  float P = kp * error;
+  float D = kd * (error - prevError);
+  int delSpeed = (int)(P + D);
+
+  wheel(curLBase + delSpeed, curRBase - delSpeed);
+  prevError = error;
 }
 `,
       "motor_driver.ino": `void wheel(int leftSpeed, int rightSpeed){
@@ -867,6 +1012,16 @@ void loop() {
 
   analogWrite(enB, abs(leftSpeed));
   analogWrite(enA, abs(rightSpeed));
+}
+
+void brake(){
+  // Active dynamic brake
+  digitalWrite(inA, HIGH);
+  digitalWrite(inB, HIGH);
+  digitalWrite(inC, HIGH);
+  digitalWrite(inD, HIGH);
+  analogWrite(enA, 255);
+  analogWrite(enB, 255);
 }
 `
     };
@@ -1035,7 +1190,7 @@ void loop() {
     offscreen.width = 760;
     offscreen.height = 520;
     const offCtx = offscreen.getContext('2d', { willReadFrequently: true });
-    let trackLineWidthPx = 25; // 25mm competition standard
+    let trackLineWidthPx = 14; // 25mm competition standard
 
     let robot = {
       x: 140,
@@ -1108,6 +1263,148 @@ void loop() {
         c.lineTo(380, 395);
         c.stroke();
       }
+      else if (activeTrackType === 'track1_maze') {
+        // Track 1: Maze Grid with 90 deg corners, T-junctions, cross intersections, and finish circular pad
+        c.beginPath();
+        c.moveTo(100, 440); c.lineTo(100, 80);
+        c.moveTo(100, 220); c.lineTo(420, 220);
+        c.moveTo(100, 150); c.lineTo(520, 150);
+        c.moveTo(100, 80); c.lineTo(200, 80);
+        c.moveTo(210, 220); c.lineTo(210, 480);
+        c.moveTo(210, 380); c.lineTo(300, 380);
+        c.moveTo(350, 220); c.lineTo(350, 400); c.lineTo(680, 400);
+        c.moveTo(410, 220); c.lineTo(410, 340); c.lineTo(700, 340); c.lineTo(700, 100);
+        c.moveTo(680, 350); c.lineTo(680, 460);
+        c.moveTo(480, 60); c.lineTo(480, 280); c.lineTo(600, 280); c.lineTo(600, 200);
+        c.stroke();
+
+        // Start Box at (60, 430, 80, 50)
+        c.fillStyle = c.strokeStyle;
+        c.fillRect(60, 430, 80, 50);
+
+        // Finish Circle at (700, 80)
+        c.beginPath();
+        c.arc(700, 80, 36, 0, 2 * Math.PI);
+        c.fill();
+      }
+      else if (activeTrackType === 'track2_robotech') {
+        // Track 2: Robo Tech Valley
+        c.beginPath();
+        c.moveTo(640, 465);
+        c.lineTo(120, 465);
+        c.lineTo(70, 415);
+        c.lineTo(70, 370);
+        // S-curve chicane
+        c.lineTo(150, 370);
+        c.lineTo(160, 400);
+        c.lineTo(160, 320);
+        // Inverted section line
+        c.lineTo(120, 250);
+        c.lineTo(70, 180);
+        c.lineTo(70, 140);
+        c.lineTo(150, 60);
+        c.lineTo(230, 60);
+        c.lineTo(150, 170);
+        c.lineTo(240, 150);
+        c.lineTo(290, 150);
+        // Acute angle peak (~45 deg)
+        c.lineTo(480, 70);
+        c.lineTo(360, 200);
+        c.stroke();
+
+        // Broken Gap (from 360,200 to 385,180 is empty)
+        c.beginPath();
+        c.moveTo(385, 180);
+        c.lineTo(540, 150);
+        c.lineTo(600, 240);
+        c.lineTo(630, 140);
+        c.lineTo(630, 240);
+        // Crossover loop
+        c.lineTo(480, 360);
+        c.lineTo(420, 260);
+        c.lineTo(520, 360);
+        c.lineTo(640, 340);
+        c.stroke();
+
+        // Inverted Block (black polygon with white track)
+        c.save();
+        c.fillStyle = '#0f172a';
+        c.beginPath();
+        c.moveTo(100, 290);
+        c.lineTo(170, 220);
+        c.lineTo(200, 250);
+        c.lineTo(130, 320);
+        c.closePath();
+        c.fill();
+        c.strokeStyle = '#ffffff';
+        c.lineWidth = trackLineWidthPx;
+        c.beginPath();
+        c.moveTo(155, 310);
+        c.lineTo(120, 250);
+        c.stroke();
+        c.restore();
+
+        // Start Box at bottom right
+        c.fillStyle = trackContrast === 'black-on-white' ? '#0f172a' : '#f8fafc';
+        c.fillRect(630, 435, 70, 50);
+
+        // Finish End Box at (630, 315, 70, 50)
+        c.fillRect(630, 315, 70, 50);
+      }
+      else if (activeTrackType === 'track3_uiu') {
+        // Track 3: UIU CSE Fest
+        c.beginPath();
+        c.moveTo(140, 60);
+        c.lineTo(140, 100);
+        let lx = 140, ly = 100;
+        const teethL = [{ dx: 30, dy: 20 }, { dx: -30, dy: 20 }, { dx: 30, dy: 20 }, { dx: -30, dy: 20 }];
+        for (const t of teethL) {
+          lx += t.dx; ly += t.dy;
+          c.lineTo(lx, ly);
+        }
+        c.lineTo(240, ly);
+        c.lineTo(240, 140);
+        c.stroke();
+
+        // Dashed Semi-Circular Arc
+        c.save();
+        c.setLineDash([14, 12]);
+        c.beginPath();
+        c.arc(240, 260, 120, -Math.PI/2, Math.PI/2);
+        c.stroke();
+        c.restore();
+
+        c.beginPath();
+        c.moveTo(240, 380);
+        c.lineTo(350, 380);
+        c.lineTo(480, 380);
+        c.lineTo(480, 440);
+        c.lineTo(600, 440);
+        c.lineTo(600, 340);
+
+        // Diamond Split and Merge
+        c.lineTo(560, 290);
+        c.lineTo(600, 240);
+        c.moveTo(600, 340);
+        c.lineTo(640, 290);
+        c.lineTo(600, 240);
+
+        // Lead from diamond up to top-right resistor
+        c.lineTo(600, 170);
+        c.lineTo(520, 100);
+        let rx = 520, ry = 100;
+        const teethR = [{ dx: 25, dy: -25 }, { dx: 25, dy: 35 }, { dx: 25, dy: -35 }, { dx: 25, dy: 35 }, { dx: 25, dy: -10 }];
+        for (const t of teethR) {
+          rx += t.dx; ry += t.dy;
+          c.lineTo(rx, ry);
+        }
+        c.lineTo(680, 100);
+        c.stroke();
+
+        // Finish Box at (655, 75, 60, 50)
+        c.fillStyle = trackContrast === 'black-on-white' ? '#0f172a' : '#f8fafc';
+        c.fillRect(655, 75, 60, 50);
+      }
       else if (activeTrackType === 'custom') {
         if (customTrackSegments.length > 1) {
           c.beginPath();
@@ -1153,6 +1450,12 @@ void loop() {
         robot.x = 80; robot.y = 260; robot.heading = 0;
       } else if (activeTrackType === 'cross') {
         robot.x = 170; robot.y = 260; robot.heading = 0;
+      } else if (activeTrackType === 'track1_maze') {
+        robot.x = 100; robot.y = 440; robot.heading = -Math.PI / 2;
+      } else if (activeTrackType === 'track2_robotech') {
+        robot.x = 620; robot.y = 465; robot.heading = Math.PI;
+      } else if (activeTrackType === 'track3_uiu') {
+        robot.x = 140; robot.y = 60; robot.heading = Math.PI / 2;
       } else if (activeTrackType === 'custom' && customTrackSegments.length > 0) {
         robot.x = customTrackSegments[0].x;
         robot.y = customTrackSegments[0].y;
@@ -1191,8 +1494,8 @@ void loop() {
       const sCenter_x = robot.x + forwardPx * Math.cos(robot.heading);
       const sCenter_y = robot.y + forwardPx * Math.sin(robot.heading);
 
-      const norm_x = -Math.sin(robot.heading);
-      const norm_y = Math.cos(robot.heading);
+      const norm_x = Math.sin(robot.heading);
+      const norm_y = -Math.cos(robot.heading);
 
       const positions = [];
       for (let i = 0; i < count; i++) {
@@ -1241,7 +1544,7 @@ void loop() {
 
       const wbPx = hardwareConfig.wheelbaseMm * 0.45;
       const v = (vR + vL) / 2.0;
-      const omega = (vR - vL) / wbPx;
+      const omega = (vL - vR) / wbPx;
 
       robot.x += v * Math.cos(robot.heading) * dt;
       robot.y += v * Math.sin(robot.heading) * dt;
@@ -1252,6 +1555,7 @@ void loop() {
 
       pathHistory.push({ x: robot.x, y: robot.y });
       if (pathHistory.length > 500) pathHistory.shift();
+      computeSensorPositions();
     }
 
     function renderSimulation() {
