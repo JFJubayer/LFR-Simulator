@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>LFR Simulator - Arduino Logic in Action</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      user-select: none;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    .slider-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body class="bg-transparent text-[var(--foreground)] antialiased p-4">
+  <div class="max-w-6xl mx-auto bg-[var(--card)] border border-[var(--border)] rounded-2xl shadow-xl overflow-hidden flex flex-col gap-4 p-5">
+    
+    <!-- Header -->
+    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border)] pb-4">
+      <div>
+        <h1 class="text-xl font-bold tracking-tight text-[var(--foreground)] flex items-center gap-2">
+          <span class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></span>
+          Line Follower Robot (LFR) Physics & Logic Simulator
+        </h1>
+        <p class="text-xs text-[var(--muted-foreground)]">
+          Simulating your exact refactored Arduino C++ code (PID, 8-sensor weighted array, motor H-bridge, recovery).
+        </p>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex items-center gap-2">
+        <button id="btnPlayPause" class="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs shadow transition">
+          Pause
+        </button>
+        <button id="btnStep" class="px-3 py-1.5 rounded-lg bg-[var(--accent)] hover:opacity-90 text-[var(--accent-foreground)] font-medium text-xs transition border border-[var(--border)]">
+          Step
+        </button>
+        <button id="btnReset" class="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-medium text-xs shadow transition">
+          Reset Robot
+        </button>
+        <button id="btnClearTrack" class="px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-800 text-white font-medium text-xs transition">
+          Clear Path Trace
+        </button>
+      </div>
+    </div>
+
+    <!-- Main Content Area: Canvas + Telemetry Sidebar -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      
+      <!-- Canvas Simulation Column (2 cols) -->
+      <div class="lg:col-span-2 flex flex-col gap-3">
+        <!-- Canvas wrapper -->
+        <div class="relative w-full rounded-xl overflow-hidden border border-[var(--border)] bg-[#111827] shadow-inner">
+          <canvas id="simCanvas" width="700" height="520" class="block w-full cursor-crosshair"></canvas>
+
+          <!-- Overlay instructions -->
+          <div class="absolute top-2 left-2 bg-black/70 backdrop-blur text-[11px] text-zinc-300 px-2.5 py-1 rounded-md border border-white/10 pointer-events-none">
+            🖱️ Click & Drag on canvas in <b>Custom Draw</b> mode to draw your own track!
+          </div>
+
+          <!-- Speed multiplier badge -->
+          <div class="absolute bottom-2 right-2 bg-black/75 backdrop-blur text-[11px] text-emerald-400 font-mono px-2 py-0.5 rounded border border-emerald-500/20">
+            Sim Speed: <span id="speedMultiplierText">1.0x</span>
+          </div>
+        </div>
+
+        <!-- Track Selector Strip -->
+        <div class="flex flex-wrap items-center justify-between gap-2 p-3 bg-[var(--background)] rounded-xl border border-[var(--border)]">
+          <span class="text-xs font-semibold text-[var(--muted-foreground)]">Select Track Preset:</span>
+          <div class="flex flex-wrap gap-1.5">
+            <button class="track-btn px-2.5 py-1 text-xs rounded-md bg-emerald-600 text-white font-medium shadow" data-track="circuit">Grand Prix Circuit</button>
+            <button class="track-btn px-2.5 py-1 text-xs rounded-md bg-[var(--card)] hover:bg-[var(--accent)] text-[var(--foreground)] border border-[var(--border)]" data-track="figure8">Figure-8 / S-Curves</button>
+            <button class="track-btn px-2.5 py-1 text-xs rounded-md bg-[var(--card)] hover:bg-[var(--accent)] text-[var(--foreground)] border border-[var(--border)]" data-track="sharp">90° Corner Challenge</button>
+            <button class="track-btn px-2.5 py-1 text-xs rounded-md bg-[var(--card)] hover:bg-[var(--accent)] text-[var(--foreground)] border border-[var(--border)]" data-track="custom">✏️ Custom Draw</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Controls & Telemetry Column (1 col) -->
+      <div class="flex flex-col gap-4">
+        
+        <!-- Live Robot Telemetry Card -->
+        <div class="p-4 rounded-xl bg-[var(--background)] border border-[var(--border)] shadow-sm flex flex-col gap-3">
+          <h3 class="text-xs uppercase font-bold tracking-wider text-[var(--muted-foreground)] flex items-center justify-between">
+            <span>Live Telemetry</span>
+            <span id="stateBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono">ON TRACK</span>
+          </h3>
+
+          <!-- Sensor Bar Visualization -->
+          <div>
+            <div class="flex justify-between text-[11px] text-[var(--muted-foreground)] mb-1">
+              <span>Sensor 0 (Left)</span>
+              <span>Sensor 7 (Right)</span>
+            </div>
+            <div class="grid grid-cols-8 gap-1 p-1.5 bg-black/40 rounded-lg border border-[var(--border)]" id="sensorLeds">
+              <!-- Generated by JS -->
+            </div>
+          </div>
+
+          <!-- Metrics Grid -->
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <div class="p-2 rounded-lg bg-[var(--card)] border border-[var(--border)]">
+              <span class="text-[10px] text-[var(--muted-foreground)] block">Calculated Error</span>
+              <span id="telError" class="font-mono font-semibold text-sm text-[var(--foreground)]">0</span>
+            </div>
+            <div class="p-2 rounded-lg bg-[var(--card)] border border-[var(--border)]">
+              <span class="text-[10px] text-[var(--muted-foreground)] block">Last Side Memory</span>
+              <span id="telLastSensor" class="font-mono font-semibold text-sm text-[var(--foreground)]">None</span>
+            </div>
+            <div class="p-2 rounded-lg bg-[var(--card)] border border-[var(--border)]">
+              <span class="text-[10px] text-[var(--muted-foreground)] block">P Term / D Term</span>
+              <span id="telPD" class="font-mono font-semibold text-sm text-sky-400">P: 0 | D: 0</span>
+            </div>
+            <div class="p-2 rounded-lg bg-[var(--card)] border border-[var(--border)]">
+              <span class="text-[10px] text-[var(--muted-foreground)] block">&Delta; Speed (delSpeed)</span>
+              <span id="telDelSpeed" class="font-mono font-semibold text-sm text-indigo-400">0</span>
+            </div>
+          </div>
+
+          <!-- Motors PWM Bars -->
+          <div class="flex flex-col gap-2 pt-1 border-t border-[var(--border)]">
+            <div>
+              <div class="flex justify-between text-[11px] font-mono mb-0.5">
+                <span>Left Motor (enB):</span>
+                <span id="leftPwmVal" class="font-bold">160</span>
+              </div>
+              <div class="w-full bg-zinc-800 rounded-full h-2 overflow-hidden flex">
+                <div id="leftPwmBar" class="bg-blue-500 h-full transition-all duration-75" style="width: 62%;"></div>
+              </div>
+            </div>
+            <div>
+              <div class="flex justify-between text-[11px] font-mono mb-0.5">
+                <span>Right Motor (enA):</span>
+                <span id="rightPwmVal" class="font-bold">170</span>
+              </div>
+              <div class="w-full bg-zinc-800 rounded-full h-2 overflow-hidden flex">
+                <div id="rightPwmBar" class="bg-cyan-500 h-full transition-all duration-75" style="width: 66%;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Tuning Sliders -->
+        <div class="p-4 rounded-xl bg-[var(--background)] border border-[var(--border)] shadow-sm flex flex-col gap-3">
+          <h3 class="text-xs uppercase font-bold tracking-wider text-[var(--muted-foreground)]">
+            Live Arduino Tunables
+          </h3>
+
+          <div class="flex flex-col gap-2.5">
+            <div>
+              <div class="slider-label">
+                <span>kp (Proportional Gain)</span>
+                <span id="kpVal" class="font-mono text-emerald-400">6.0</span>
+              </div>
+              <input type="range" id="kpSlider" min="0" max="15" step="0.5" value="6.0" class="w-full accent-emerald-500 cursor-pointer">
+            </div>
+
+            <div>
+              <div class="slider-label">
+                <span>kd (Derivative Gain)</span>
+                <span id="kdVal" class="font-mono text-sky-400">8.0</span>
+              </div>
+              <input type="range" id="kdSlider" min="0" max="30" step="1.0" value="8.0" class="w-full accent-sky-500 cursor-pointer">
+            </div>
+
+            <div>
+              <div class="slider-label">
+                <span>Left / Right Base Speed</span>
+                <span id="baseSpeedVal" class="font-mono text-amber-400">160 / 170</span>
+              </div>
+              <input type="range" id="baseSpeedSlider" min="60" max="230" step="5" value="160" class="w-full accent-amber-500 cursor-pointer">
+            </div>
+
+            <div>
+              <div class="slider-label">
+                <span>Spin Recovery Speed</span>
+                <span id="spinSpeedVal" class="font-mono text-rose-400">120</span>
+              </div>
+              <input type="range" id="spinSpeedSlider" min="60" max="200" step="5" value="120" class="w-full accent-rose-500 cursor-pointer">
+            </div>
+
+            <div>
+              <div class="slider-label">
+                <span>Sim Speed Accelerator</span>
+                <span id="simSpeedVal" class="font-mono text-purple-400">1.0x</span>
+              </div>
+              <input type="range" id="simSpeedSlider" min="0.2" max="3.0" step="0.2" value="1.0" class="w-full accent-purple-500 cursor-pointer">
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- Canvas & Simulation State ---
+    const canvas = document.getElementById('simCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let isRunning = true;
+    let simSpeedMultiplier = 1.0;
+    let activeTrackType = 'circuit';
+    let pathHistory = [];
+
+    // --- Arduino Control Parameters ---
+    let kp = 6.0;
+    let kd = 8.0;
+    let leftBaseSpeed = 160;
+    let rightBaseSpeed = 170;
+    let maxSpeed = 255;
+    let spinSpeed = 120;
+    const LINE_LOST = 420;
+
+    let lastSensor = 0; // 1 = left, 2 = right, 0 = unset
+    let prevError = 0;
+    let wasLost = false;
+
+    // --- Robot Physical Model (Differential Drive) ---
+    // In simulation pixels: 1 meter ≈ 500 px.
+    // Robot wheelbase = 45 px (~9 cm), sensor forward = 32 px (~6.4 cm), sensor span = 36 px (~7.2 cm)
+    const wheelbase = 44; 
+    const sensorForward = 32;
+    const sensorSpan = 38;
+    const trackLineWidth = 18; // px
+
+    let robot = {
+      x: 120,
+      y: 160,
+      heading: 0, // Radians, 0 = facing right
+      leftSpeed: 0,
+      rightSpeed: 0,
+      error: 0,
+      P: 0,
+      D: 0,
+      delSpeed: 0,
+      sensors: [false, false, false, false, false, false, false, false]
+    };
+
+    // --- Track Geometries ---
+    let customTrackPoints = [];
+    let isDrawingTrack = false;
+
+    function buildTrack(type) {
+      pathHistory = [];
+      if (type === 'circuit') {
+        robot.x = 140;
+        robot.y = 120;
+        robot.heading = 0;
+      } else if (type === 'figure8') {
+        robot.x = 350;
+        robot.y = 260;
+        robot.heading = -Math.PI / 4;
+      } else if (type === 'sharp') {
+        robot.x = 100;
+        robot.y = 100;
+        robot.heading = 0;
+      }
+      lastSensor = 0;
+      prevError = 0;
+      wasLost = false;
+    }
+
+    function drawTrackGeometry(c) {
+      c.save();
+      c.strokeStyle = '#f8fafc'; // White track line on dark floor
+      c.lineWidth = trackLineWidth;
+      c.lineCap = 'round';
+      c.lineJoin = 'round';
+
+      if (activeTrackType === 'circuit') {
+        c.beginPath();
+        // Grand Prix style rounded circuit
+        c.moveTo(140, 120);
+        c.lineTo(540, 120);
+        c.arc(540, 200, 80, -Math.PI/2, Math.PI/2);
+        c.lineTo(440, 280);
+        c.arc(440, 360, 80, -Math.PI/2, Math.PI/2);
+        c.lineTo(220, 440);
+        c.arc(220, 340, 100, Math.PI/2, Math.PI);
+        c.lineTo(120, 220);
+        c.arc(140, 220, 100, Math.PI, 1.5 * Math.PI);
+        c.closePath();
+        c.stroke();
+      } 
+      else if (activeTrackType === 'figure8') {
+        c.beginPath();
+        c.ellipse(230, 260, 140, 110, 0, 0, 2 * Math.PI);
+        c.stroke();
+        c.beginPath();
+        c.ellipse(470, 260, 140, 110, 0, 0, 2 * Math.PI);
+        c.stroke();
+      } 
+      else if (activeTrackType === 'sharp') {
+        c.beginPath();
+        c.moveTo(100, 100);
+        c.lineTo(600, 100);
+        c.lineTo(600, 420);
+        c.lineTo(350, 420);
+        c.lineTo(350, 250);
+        c.lineTo(100, 250);
+        c.closePath();
+        c.stroke();
+      }
+      else if (activeTrackType === 'custom') {
+        if (customTrackPoints.length > 1) {
+          c.beginPath();
+          c.moveTo(customTrackPoints[0].x, customTrackPoints[0].y);
+          for (let i = 1; i < customTrackPoints.length; i++) {
+            c.lineTo(customTrackPoints[i].x, customTrackPoints[i].y);
+          }
+          c.stroke();
+        }
+      }
+      c.restore();
+    }
+
+    // Check if a point (x, y) is on the line using off-screen pixel test
+    const offscreen = document.createElement('canvas');
+    offscreen.width = 700;
+    offscreen.height = 520;
+    const offCtx = offscreen.getContext('2d', { willReadFrequently: true });
+
+    function renderOffscreenTrack() {
+      offCtx.clearRect(0, 0, offscreen.width, offscreen.height);
+      offCtx.fillStyle = '#000000';
+      offCtx.fillRect(0, 0, offscreen.width, offscreen.height);
+      drawTrackGeometry(offCtx);
+    }
+
+    function isPointOnLine(px, py) {
+      if (px < 0 || px >= offscreen.width || py < 0 || py >= offscreen.height) return false;
+      const pixel = offCtx.getImageData(Math.floor(px), Math.floor(py), 1, 1).data;
+      // White track line has brightness > 128
+      return pixel[0] > 120;
+    }
+
+    // --- Exact Arduino Logic Implementations ---
+    function readSensor() {
+      // 8 sensor positions along front sensor bar
+      const sCenter_x = robot.x + sensorForward * Math.cos(robot.heading);
+      const sCenter_y = robot.y + sensorForward * Math.sin(robot.heading);
+
+      // Normal vector pointing to the left of the robot
+      const norm_x = -Math.sin(robot.heading);
+      const norm_y = Math.cos(robot.heading);
+
+      let sumS = 0;
+      let sumWS = 0;
+
+      for (let i = 0; i < 8; i++) {
+        // Sensor 0 is LEFT (+norm), Sensor 7 is RIGHT (-norm)
+        const frac = i / 7.0;
+        const offset = (sensorSpan / 2.0) - frac * sensorSpan;
+        const sx = sCenter_x + offset * norm_x;
+        const sy = sCenter_y + offset * norm_y;
+
+        // In Arduino code: active LOW (0 means line detected)
+        // In our simulator: isPointOnLine(sx, sy) == true means active
+        const detected = isPointOnLine(sx, sy);
+        robot.sensors[i] = detected;
+
+        if (detected) {
+          sumS++;
+          sumWS += (i + 1) * 10;
+        }
+      }
+
+      if (sumS === 0) {
+        return LINE_LOST;
+      }
+
+      const linePos = Math.floor(sumWS / sumS);
+      const error = linePos - 45;
+
+      // Track which side of the center the line was last seen on
+      if (error < 0) {
+        lastSensor = 1; // Left side
+      } else if (error > 0) {
+        lastSensor = 2; // Right side
+      }
+
+      return error;
+    }
+
+    function wheel(lSpeed, rSpeed) {
+      // Exactly mirrors motor_driver.ino:
+      // Clamp speed while properly preserving the sign (+ for forward, - for reverse)
+      robot.leftSpeed = Math.max(-maxSpeed, Math.min(maxSpeed, Math.round(lSpeed)));
+      robot.rightSpeed = Math.max(-maxSpeed, Math.min(maxSpeed, Math.round(rSpeed)));
+    }
+
+    function lineFollow() {
+      // Exactly mirrors main.ino:
+      const error = readSensor();
+      robot.error = error;
+
+      if (error === LINE_LOST) {
+        wasLost = true;
+        if (lastSensor === 1) {
+          wheel(-spinSpeed, spinSpeed);
+        } else if (lastSensor === 2) {
+          wheel(spinSpeed, -spinSpeed);
+        } else {
+          wheel(0, 0); // Stop safely
+        }
+        robot.P = 0;
+        robot.D = 0;
+        robot.delSpeed = 0;
+      } else {
+        if (wasLost) {
+          prevError = error; // Prevent derivative spike
+          wasLost = false;
+        }
+
+        const P = kp * error;
+        const D = kd * (error - prevError);
+        const delSpeed = Math.round(P + D);
+
+        robot.P = Math.round(P);
+        robot.D = Math.round(D);
+        robot.delSpeed = delSpeed;
+
+        wheel(leftBaseSpeed + delSpeed, rightBaseSpeed - delSpeed);
+        prevError = error;
+      }
+    }
+
+    // --- Physics Simulation Step (Differential Drive Kinematics) ---
+    function updatePhysics(dt) {
+      // PWM to velocity factor
+      const speedScale = 0.85; 
+      const vL = (robot.leftSpeed / 255.0) * speedScale * 100;
+      const vR = (robot.rightSpeed / 255.0) * speedScale * 100;
+
+      const v = (vR + vL) / 2.0;
+      const omega = (vR - vL) / wheelbase;
+
+      robot.x += v * Math.cos(robot.heading) * dt;
+      robot.y += v * Math.sin(robot.heading) * dt;
+      robot.heading += omega * dt;
+
+      // Keep in canvas bounds
+      if (robot.x < 10) robot.x = 10;
+      if (robot.x > canvas.width - 10) robot.x = canvas.width - 10;
+      if (robot.y < 10) robot.y = 10;
+      if (robot.y > canvas.height - 10) robot.y = canvas.height - 10;
+
+      // Record path history (capped at 400 pts)
+      pathHistory.push({ x: robot.x, y: robot.y });
+      if (pathHistory.length > 400) pathHistory.shift();
+    }
+
+    // --- Rendering ---
+    function render() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // 1. Draw floor grid
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 1;
+      const gridSize = 40;
+      for (let x = 0; x < canvas.width; x += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+      }
+      for (let y = 0; y < canvas.height; y += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+      }
+
+      // 2. Draw Track
+      drawTrackGeometry(ctx);
+
+      // 3. Draw Robot Path Trace
+      if (pathHistory.length > 1) {
+        ctx.save();
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.45)';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(pathHistory[0].x, pathHistory[0].y);
+        for (let i = 1; i < pathHistory.length; i++) {
+          ctx.lineTo(pathHistory[i].x, pathHistory[i].y);
+        }
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // 4. Draw Robot Chassis
+      ctx.save();
+      ctx.translate(robot.x, robot.y);
+      ctx.rotate(robot.heading);
+
+      // Chassis shadow
+      ctx.shadowColor = 'rgba(0,0,0,0.6)';
+      ctx.shadowBlur = 10;
+
+      // Main acrylic PCB body
+      ctx.fillStyle = '#1e293b';
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.roundRect(-24, -18, 48, 36, 6);
+      ctx.fill();
+      ctx.stroke();
+
+      // Heading indicator triangle
+      ctx.fillStyle = '#38bdf8';
+      ctx.beginPath();
+      ctx.moveTo(18, 0);
+      ctx.lineTo(8, -7);
+      ctx.lineTo(8, 7);
+      ctx.closePath();
+      ctx.fill();
+
+      // Drive wheels (differential drive)
+      ctx.fillStyle = '#0f172a';
+      ctx.strokeStyle = '#64748b';
+      ctx.lineWidth = 1.5;
+      // Left wheel (at -y)
+      ctx.fillRect(-12, -24, 24, 6);
+      ctx.strokeRect(-12, -24, 24, 6);
+      // Right wheel (at +y)
+      ctx.fillRect(-12, 18, 24, 6);
+      ctx.strokeRect(-12, 18, 24, 6);
+
+      // Front sensor mount bracket
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(18, 0);
+      ctx.lineTo(sensorForward, 0);
+      ctx.stroke();
+
+      // Sensor bar PCB
+      ctx.fillStyle = '#0f172a';
+      ctx.strokeStyle = '#22c55e';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.roundRect(sensorForward - 3, -sensorSpan/2 - 4, 8, sensorSpan + 8, 3);
+      ctx.fill();
+      ctx.stroke();
+
+      // Individual Sensor LEDs on bar
+      for (let i = 0; i < 8; i++) {
+        const frac = i / 7.0;
+        const sy = (sensorSpan / 2.0) - frac * sensorSpan;
+        const sx = sensorForward + 1;
+
+        ctx.beginPath();
+        ctx.arc(sx, sy, 2.5, 0, 2 * Math.PI);
+        if (robot.sensors[i]) {
+          ctx.fillStyle = '#4ade80'; // Glowing green
+          ctx.shadowColor = '#22c55e';
+          ctx.shadowBlur = 8;
+        } else {
+          ctx.fillStyle = '#dc2626'; // Red
+          ctx.shadowBlur = 0;
+        }
+        ctx.fill();
+      }
+
+      ctx.restore();
+    }
+
+    // --- UI Updates ---
+    function updateTelemetryUI() {
+      // Sensor LEDs in sidebar
+      const ledsContainer = document.getElementById('sensorLeds');
+      ledsContainer.innerHTML = '';
+      for (let i = 0; i < 8; i++) {
+        const active = robot.sensors[i];
+        const d = document.createElement('div');
+        d.className = `flex flex-col items-center justify-center p-1 rounded font-mono text-[10px] font-bold ${
+          active ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-zinc-800 text-zinc-500 border border-zinc-700'
+        }`;
+        d.innerHTML = `<span>S${i}</span><span class="w-2 h-2 rounded-full mt-1 ${active ? 'bg-emerald-400 animate-ping' : 'bg-zinc-600'}"></span>`;
+        ledsContainer.appendChild(d);
+      }
+
+      // Status badge
+      const badge = document.getElementById('stateBadge');
+      if (robot.error === LINE_LOST) {
+        badge.textContent = 'LINE LOST (SPINNING)';
+        badge.className = 'text-[10px] px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30 font-mono animate-pulse';
+      } else {
+        badge.textContent = 'TRACKING';
+        badge.className = 'text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono';
+      }
+
+      // Metrics
+      document.getElementById('telError').textContent = (robot.error === LINE_LOST) ? '420 (Lost)' : robot.error;
+      document.getElementById('telLastSensor').textContent = 
+        lastSensor === 1 ? 'Left (1)' : (lastSensor === 2 ? 'Right (2)' : 'Unset (0)');
+      document.getElementById('telPD').textContent = `P: ${robot.P} | D: ${robot.D}`;
+      document.getElementById('telDelSpeed').textContent = robot.delSpeed;
+
+      // Motor PWMs
+      document.getElementById('leftPwmVal').textContent = robot.leftSpeed;
+      document.getElementById('rightPwmVal').textContent = robot.rightSpeed;
+
+      const lPct = Math.min(100, Math.round((Math.abs(robot.leftSpeed) / 255) * 100));
+      const rPct = Math.min(100, Math.round((Math.abs(robot.rightSpeed) / 255) * 100));
+      document.getElementById('leftPwmBar').style.width = lPct + '%';
+      document.getElementById('rightPwmBar').style.width = rPct + '%';
+    }
+
+    // --- Main Simulation Loop ---
+    let lastTime = performance.now();
+    function simLoop(now) {
+      const deltaSec = Math.min((now - lastTime) / 1000.0, 0.05);
+      lastTime = now;
+
+      if (isRunning) {
+        // Run sub-steps for smooth physical integration
+        const subSteps = 4;
+        const subDt = (deltaSec * simSpeedMultiplier) / subSteps;
+        for (let s = 0; s < subSteps; s++) {
+          lineFollow();
+          updatePhysics(subDt);
+        }
+      }
+
+      render();
+      updateTelemetryUI();
+      requestAnimationFrame(simLoop);
+    }
+
+    // --- Event Listeners & Interactive Controls ---
+    document.getElementById('btnPlayPause').addEventListener('click', (e) => {
+      isRunning = !isRunning;
+      e.target.textContent = isRunning ? 'Pause' : 'Resume';
+      e.target.className = isRunning
+        ? 'px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs shadow transition'
+        : 'px-3.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-medium text-xs shadow transition';
+    });
+
+    document.getElementById('btnStep').addEventListener('click', () => {
+      isRunning = false;
+      document.getElementById('btnPlayPause').textContent = 'Resume';
+      lineFollow();
+      updatePhysics(0.02);
+      render();
+      updateTelemetryUI();
+    });
+
+    document.getElementById('btnReset').addEventListener('click', () => {
+      buildTrack(activeTrackType);
+      renderOffscreenTrack();
+    });
+
+    document.getElementById('btnClearTrack').addEventListener('click', () => {
+      pathHistory = [];
+    });
+
+    // Track Preset selection
+    document.querySelectorAll('.track-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.track-btn').forEach(b => {
+          b.className = 'track-btn px-2.5 py-1 text-xs rounded-md bg-[var(--card)] hover:bg-[var(--accent)] text-[var(--foreground)] border border-[var(--border)]';
+        });
+        btn.className = 'track-btn px-2.5 py-1 text-xs rounded-md bg-emerald-600 text-white font-medium shadow';
+        activeTrackType = btn.dataset.track;
+        if (activeTrackType === 'custom') {
+          customTrackPoints = [];
+        }
+        buildTrack(activeTrackType);
+        renderOffscreenTrack();
+      });
+    });
+
+    // Custom track drawing on canvas
+    canvas.addEventListener('mousedown', (e) => {
+      if (activeTrackType !== 'custom') return;
+      isDrawingTrack = true;
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      customTrackPoints = [{ x, y }];
+      robot.x = x;
+      robot.y = y;
+      robot.heading = 0;
+      renderOffscreenTrack();
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (!isDrawingTrack || activeTrackType !== 'custom') return;
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      customTrackPoints.push({ x, y });
+      renderOffscreenTrack();
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (isDrawingTrack) {
+        isDrawingTrack = false;
+        renderOffscreenTrack();
+      }
+    });
+
+    // Slider inputs
+    document.getElementById('kpSlider').addEventListener('input', (e) => {
+      kp = parseFloat(e.target.value);
+      document.getElementById('kpVal').textContent = kp.toFixed(1);
+    });
+
+    document.getElementById('kdSlider').addEventListener('input', (e) => {
+      kd = parseFloat(e.target.value);
+      document.getElementById('kdVal').textContent = kd.toFixed(1);
+    });
+
+    document.getElementById('baseSpeedSlider').addEventListener('input', (e) => {
+      const val = parseInt(e.target.value);
+      leftBaseSpeed = val;
+      rightBaseSpeed = val + 10; // Maintains original slight offset
+      document.getElementById('baseSpeedVal').textContent = `${leftBaseSpeed} / ${rightBaseSpeed}`;
+    });
+
+    document.getElementById('spinSpeedSlider').addEventListener('input', (e) => {
+      spinSpeed = parseInt(e.target.value);
+      document.getElementById('spinSpeedVal').textContent = spinSpeed;
+    });
+
+    document.getElementById('simSpeedSlider').addEventListener('input', (e) => {
+      simSpeedMultiplier = parseFloat(e.target.value);
+      document.getElementById('simSpeedVal').textContent = simSpeedMultiplier.toFixed(1) + 'x';
+      document.getElementById('speedMultiplierText').textContent = simSpeedMultiplier.toFixed(1) + 'x';
+    });
+
+    // Init
+    buildTrack('circuit');
+    renderOffscreenTrack();
+    requestAnimationFrame(simLoop);
+  </script>
+</body>
+</html>
