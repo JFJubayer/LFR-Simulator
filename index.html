@@ -3,152 +3,193 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LFR Studio - Modular Robot CAD, Wiring, Multi-File IDE & Simulator</title>
+  <title>LFR Studio - Line Follower Robot CAD, Wiring, IDE & Physics Simulator</title>
   <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     body {
       margin: 0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       user-select: none;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
     }
-    .tab-active {
-      background-color: var(--card, #1e293b);
-      color: #38bdf8;
-      border-bottom: 2px solid #38bdf8;
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .tab-btn.active {
+      background-color: #ffffff;
+      color: #0284c7;
+      border-bottom: 2px solid #0284c7;
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     }
     .code-editor {
-      font-family: 'Fira Code', 'Courier New', monospace;
+      font-family: 'JetBrains Mono', monospace;
       tab-size: 2;
     }
-    /* Custom scrollbars */
+    /* Clean custom scrollbar */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: #0f172a; }
-    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
   </style>
 </head>
-<body class="bg-[#0b0f19] text-slate-100 antialiased min-h-screen flex flex-col">
+<body class="min-h-screen flex flex-col antialiased">
 
-  <!-- TOP APP BAR -->
-  <header class="bg-[#111827] border-b border-slate-800 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-50">
+  <!-- ========================================== -->
+  <!-- TOP NAVIGATION / CONTROL BAR -->
+  <!-- ========================================== -->
+  <header class="bg-white border-b border-slate-200 px-5 py-2.5 flex flex-wrap items-center justify-between gap-4 sticky top-0 z-50 shadow-sm">
+    <!-- Brand / Title -->
     <div class="flex items-center gap-3">
-      <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-sky-500 to-emerald-400 flex items-center justify-center shadow-lg shadow-sky-500/20">
-        <svg class="w-5 h-5 text-black font-bold" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+      <div class="w-9 h-9 rounded-lg bg-sky-600 text-white flex items-center justify-center shadow-md shadow-sky-600/20">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
         </svg>
       </div>
       <div>
-        <h1 class="text-sm font-bold tracking-tight text-white flex items-center gap-2">
-          LFR Studio Pro
-          <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono">v2.0 CAD+IDE</span>
-        </h1>
-        <p class="text-[11px] text-slate-400">Modular Robot Builder • Wiring Matrix • Multi-File Arduino IDE • 2D Physics</p>
+        <div class="flex items-center gap-2">
+          <h1 class="text-sm font-bold tracking-tight text-slate-900">LFR Studio Pro</h1>
+          <span class="text-[10px] px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 border border-sky-200 font-semibold">CAD & Simulator</span>
+          <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold">Standard Arena</span>
+        </div>
+        <p class="text-[11px] text-slate-500">Modular Robot Builder • Multi-File Arduino IDE • 2D Kinematics</p>
       </div>
     </div>
 
-    <!-- Quick Playback Toolbar -->
-    <div class="flex items-center gap-2 bg-[#1e293b] p-1 rounded-xl border border-slate-700">
-      <button id="btnPlayPause" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs shadow flex items-center gap-1.5 transition">
+    <!-- Live Execution Controls -->
+    <div class="flex items-center gap-2 bg-slate-100 p-1 rounded-xl border border-slate-200">
+      <button id="btnPlayPause" class="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs shadow-sm flex items-center gap-1.5 transition">
         <svg id="playIcon" class="w-3.5 h-3.5 hidden" fill="currentColor" viewBox="0 0 20 20"><path d="M4.5 3.5v13L16 10l-11.5-6.5z"/></svg>
         <svg id="pauseIcon" class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M5 4h3v12H5V4zm7 0h3v12h-3V4z"/></svg>
         <span id="playPauseText">Pause</span>
       </button>
-      <button id="btnStep" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700 text-slate-300 font-medium text-xs transition flex items-center gap-1" title="Step one frame">
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>
+      <button id="btnStep" class="px-2.5 py-1.5 rounded-lg bg-white hover:bg-slate-50 text-slate-700 font-medium text-xs border border-slate-200 shadow-sm transition flex items-center gap-1" title="Single step physics cycle">
+        <svg class="w-3.5 h-3.5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>
         Step
       </button>
-      <button id="btnResetRobot" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700 text-slate-300 font-medium text-xs transition" title="Reset robot position">
-        🔄 Reset
+      <button id="btnResetRobot" class="px-2.5 py-1.5 rounded-lg bg-white hover:bg-slate-50 text-slate-700 font-medium text-xs border border-slate-200 shadow-sm transition" title="Reset robot position">
+        🔄 Reset Position
       </button>
-      <div class="h-4 w-px bg-slate-700 mx-1"></div>
-      <div class="flex items-center gap-1 text-[11px] text-slate-400 font-mono px-2">
-        <span>Speed:</span>
-        <select id="simSpeedSelect" class="bg-[#0f172a] text-sky-400 border border-slate-700 rounded px-1.5 py-0.5 text-xs outline-none cursor-pointer">
+      <div class="h-4 w-px bg-slate-300 mx-1"></div>
+      <div class="flex items-center gap-1.5 text-xs text-slate-600 px-1">
+        <span class="text-[11px] font-medium text-slate-500">Speed:</span>
+        <select id="simSpeedSelect" class="bg-white border border-slate-200 text-slate-700 rounded-md px-1.5 py-0.5 text-xs font-mono outline-none shadow-sm cursor-pointer">
+          <option value="0.25">0.25x (Slow Mo)</option>
           <option value="0.5">0.5x</option>
-          <option value="1.0" selected>1.0x</option>
+          <option value="1.0" selected>1.0x (Normal)</option>
           <option value="1.5">1.5x</option>
-          <option value="2.0">2.0x</option>
+          <option value="2.0">2.0x (Fast)</option>
           <option value="3.0">3.0x</option>
         </select>
       </div>
     </div>
 
-    <!-- Compile & Flash Button -->
-    <button id="btnFlashCode" class="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white font-medium text-xs shadow-lg shadow-sky-600/25 flex items-center gap-1.5 transition">
-      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-      <span>⚡ Flash Code to Robot</span>
+    <!-- Compile / Flash Action -->
+    <button id="btnFlashCode" class="px-4 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs shadow-sm flex items-center gap-1.5 transition">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+      <span>⚡ Compile & Flash to Robot</span>
     </button>
   </header>
 
-  <!-- NAVIGATION WORKBENCH TABS -->
-  <nav class="bg-[#111827] border-b border-slate-800 px-4 flex gap-1 text-xs font-semibold overflow-x-auto">
-    <button class="nav-tab px-4 py-2.5 text-slate-400 hover:text-slate-200 transition tab-active flex items-center gap-2" data-target="panel-arena">
+  <!-- ========================================== -->
+  <!-- MAIN WORKBENCH TABS -->
+  <!-- ========================================== -->
+  <nav class="bg-slate-100/80 border-b border-slate-200 px-5 flex gap-1 text-xs font-medium overflow-x-auto">
+    <button class="tab-btn px-4 py-2.5 text-slate-600 hover:text-slate-900 transition active flex items-center gap-2" data-panel="panel-arena">
       <span>🚀 Simulation & Arena</span>
     </button>
-    <button class="nav-tab px-4 py-2.5 text-slate-400 hover:text-slate-200 transition flex items-center gap-2" data-target="panel-cad">
+    <button class="tab-btn px-4 py-2.5 text-slate-600 hover:text-slate-900 transition flex items-center gap-2" data-panel="panel-cad">
       <span>🛠️ CAD & Hardware Builder</span>
     </button>
-    <button class="nav-tab px-4 py-2.5 text-slate-400 hover:text-slate-200 transition flex items-center gap-2" data-target="panel-wiring">
+    <button class="tab-btn px-4 py-2.5 text-slate-600 hover:text-slate-900 transition flex items-center gap-2" data-panel="panel-wiring">
       <span>🔌 Wiring & Pin Matrix</span>
     </button>
-    <button class="nav-tab px-4 py-2.5 text-slate-400 hover:text-slate-200 transition flex items-center gap-2" data-target="panel-ide">
+    <button class="tab-btn px-4 py-2.5 text-slate-600 hover:text-slate-900 transition flex items-center gap-2" data-panel="panel-ide">
       <span>💻 Multi-File Arduino IDE</span>
-      <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+      <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
     </button>
-    <button class="nav-tab px-4 py-2.5 text-slate-400 hover:text-slate-200 transition flex items-center gap-2" data-target="panel-tracks">
+    <button class="tab-btn px-4 py-2.5 text-slate-600 hover:text-slate-900 transition flex items-center gap-2" data-panel="panel-tracks">
       <span>🗺️ Track & Map Studio</span>
     </button>
   </nav>
 
-  <!-- MAIN WORKBENCH PANELS -->
-  <main class="flex-1 p-4 max-w-7xl w-full mx-auto">
+  <!-- ========================================== -->
+  <!-- MAIN CONTENT CONTAINER -->
+  <!-- ========================================== -->
+  <main class="flex-1 p-5 max-w-7xl w-full mx-auto">
 
     <!-- ========================================== -->
     <!-- TAB 1: SIMULATION ARENA & TELEMETRY -->
     <!-- ========================================== -->
-    <section id="panel-arena" class="tab-panel grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <section id="panel-arena" class="tab-content grid grid-cols-1 lg:grid-cols-3 gap-5">
+      
       <!-- 2D Physics Viewport (2 cols) -->
       <div class="lg:col-span-2 flex flex-col gap-3">
-        <div class="relative bg-[#090d16] rounded-2xl overflow-hidden border border-slate-800 shadow-2xl">
-          <canvas id="simCanvas" width="800" height="560" class="w-full h-auto block cursor-crosshair"></canvas>
-
-          <!-- Floating Overlays -->
-          <div class="absolute top-3 left-3 flex flex-wrap gap-2 pointer-events-none">
-            <span id="badgeStatus" class="px-2.5 py-1 rounded-md text-[11px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 backdrop-blur">
-              TRACKING
-            </span>
-            <span id="badgeBoard" class="px-2.5 py-1 rounded-md text-[11px] font-mono bg-black/60 text-sky-400 border border-white/10 backdrop-blur">
-              Board: Arduino Nano
-            </span>
-            <span id="badgeBattery" class="px-2.5 py-1 rounded-md text-[11px] font-mono bg-black/60 text-amber-400 border border-white/10 backdrop-blur">
-              7.4V (2S LiPo)
-            </span>
-          </div>
-
-          <!-- Bottom Telemetry HUD -->
-          <div class="absolute bottom-3 left-3 right-3 bg-black/75 backdrop-blur-md rounded-xl p-2.5 border border-white/10 flex flex-wrap items-center justify-between gap-2 text-xs">
-            <div class="flex items-center gap-4 font-mono">
-              <div>
-                <span class="text-slate-400 text-[10px] block">Calculated Error</span>
-                <span id="hudError" class="font-bold text-white text-sm">0</span>
-              </div>
-              <div>
-                <span class="text-slate-400 text-[10px] block">delSpeed</span>
-                <span id="hudDelSpeed" class="font-bold text-indigo-400 text-sm">0</span>
-              </div>
-              <div>
-                <span class="text-slate-400 text-[10px] block">Left PWM (enB)</span>
-                <span id="hudLeftPwm" class="font-bold text-sky-400 text-sm">160</span>
-              </div>
-              <div>
-                <span class="text-slate-400 text-[10px] block">Right PWM (enA)</span>
-                <span id="hudRightPwm" class="font-bold text-cyan-400 text-sm">170</span>
-              </div>
+        <div class="relative bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+          
+          <!-- Viewport Bar -->
+          <div class="bg-slate-50 border-b border-slate-200 px-3.5 py-2 flex flex-wrap items-center justify-between text-xs">
+            <div class="flex items-center gap-2">
+              <span id="badgeStatus" class="px-2.5 py-0.5 rounded-full text-[11px] font-mono font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                ON TRACK
+              </span>
+              <span id="badgeBoard" class="text-slate-600 font-medium text-[11px]">
+                Arduino Nano (5V)
+              </span>
+              <span class="text-slate-300">•</span>
+              <span id="badgeBattery" class="text-amber-700 font-medium text-[11px]">
+                7.4V (2S LiPo)
+              </span>
             </div>
 
             <div class="flex items-center gap-2">
-              <button id="btnClearPath" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px]">Clear Trail</button>
-              <button id="btnCenterRobot" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px]">Snap to Track</button>
+              <button id="btnPickDrop" class="px-2 py-1 rounded bg-white hover:bg-slate-100 text-slate-700 text-[11px] font-medium border border-slate-200 shadow-2xs flex items-center gap-1 transition">
+                <span>✋ Pick & Place</span>
+              </button>
+              <button id="btnClearTrail" class="px-2 py-1 rounded bg-white hover:bg-slate-100 text-slate-700 text-[11px] font-medium border border-slate-200 shadow-2xs transition">
+                Clear Trail
+              </button>
+              <button id="btnSnapLine" class="px-2 py-1 rounded bg-white hover:bg-slate-100 text-slate-700 text-[11px] font-medium border border-slate-200 shadow-2xs transition">
+                Snap to Line
+              </button>
+            </div>
+          </div>
+
+          <!-- Canvas Container: REAL WHITE TRACK MAT WITH BLACK LINE -->
+          <div class="relative w-full bg-[#f8fafc] overflow-hidden flex justify-center items-center cursor-default">
+            <canvas id="simCanvas" width="760" height="520" class="w-full h-auto block select-none"></canvas>
+            
+            <div id="dragTooltip" class="hidden absolute pointer-events-none bg-slate-900/80 text-white text-[10px] font-medium px-2 py-1 rounded shadow">
+              Click & Drag to move robot. Scroll wheel to rotate!
+            </div>
+          </div>
+
+          <!-- Bottom Arena HUD Strip -->
+          <div class="bg-white border-t border-slate-200 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div class="grid grid-cols-4 gap-4 font-mono">
+              <div>
+                <span class="text-slate-400 text-[10px] uppercase font-semibold block">Error</span>
+                <span id="hudError" class="font-bold text-slate-900 text-sm">0</span>
+              </div>
+              <div>
+                <span class="text-slate-400 text-[10px] uppercase font-semibold block">delSpeed</span>
+                <span id="hudDelSpeed" class="font-bold text-indigo-600 text-sm">0</span>
+              </div>
+              <div>
+                <span class="text-slate-400 text-[10px] uppercase font-semibold block">Left (PWM)</span>
+                <span id="hudLeftPwm" class="font-bold text-sky-600 text-sm">160</span>
+              </div>
+              <div>
+                <span class="text-slate-400 text-[10px] uppercase font-semibold block">Right (PWM)</span>
+                <span id="hudRightPwm" class="font-bold text-sky-600 text-sm">170</span>
+              </div>
+            </div>
+
+            <div class="text-[11px] text-slate-500 font-mono">
+              Arena: <span class="font-semibold text-slate-800">White Vinyl</span> | Line: <span class="font-semibold text-slate-800">Black Tape (25mm)</span>
             </div>
           </div>
         </div>
@@ -157,73 +198,84 @@
       <!-- Telemetry & Sensor Matrix (1 col) -->
       <div class="flex flex-col gap-4">
         
-        <!-- Sensor Bar Live Feedback Card -->
-        <div class="bg-[#111827] border border-slate-800 rounded-2xl p-4 shadow-sm flex flex-col gap-3">
-          <div class="flex justify-between items-center">
-            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">Sensor Bar Array</h3>
-            <span id="sensorTypeBadge" class="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">Digital (8ch)</span>
+        <!-- Sensor Array Visualizer Card -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-col gap-3">
+          <div class="flex justify-between items-center border-b border-slate-100 pb-2">
+            <div>
+              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-800">Sensor Bar Array</h3>
+              <p class="text-[11px] text-slate-500">Green = Over Black Line | Off = White Floor</p>
+            </div>
+            <span id="sensorModeBadge" class="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-50 text-sky-700 border border-sky-200 font-semibold">
+              Digital (8ch)
+            </span>
           </div>
 
-          <div id="sensorMatrixDisplay" class="grid grid-cols-8 gap-1.5 p-2 bg-[#090d16] rounded-xl border border-slate-800">
-            <!-- Dynamically populated by JS -->
+          <!-- Sensor LED indicators -->
+          <div id="sensorMatrixDisplay" class="grid grid-cols-8 gap-1.5 p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+            <!-- Populated dynamically -->
           </div>
 
           <div class="flex justify-between text-[11px] text-slate-500 font-mono px-1">
-            <span>Left (S0)</span>
+            <span>S0 (Left)</span>
             <span>Center</span>
-            <span>Right (S7)</span>
+            <span>S7 (Right)</span>
           </div>
         </div>
 
-        <!-- Motors & Drive Telemetry -->
-        <div class="bg-[#111827] border border-slate-800 rounded-2xl p-4 shadow-sm flex flex-col gap-3">
-          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">Motor Driver Status</h3>
-          <div class="space-y-3 text-xs">
-            <div>
-              <div class="flex justify-between text-slate-300 mb-1 font-mono">
-                <span>Left Motor: <b id="leftMotorDir" class="text-emerald-400">FORWARD</b></span>
-                <span id="leftMotorVolt" class="text-slate-400">5.4V</span>
-              </div>
-              <div class="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden">
-                <div id="leftMotorBar" class="bg-sky-500 h-full transition-all duration-75" style="width: 62%;"></div>
-              </div>
-            </div>
-
-            <div>
-              <div class="flex justify-between text-slate-300 mb-1 font-mono">
-                <span>Right Motor: <b id="rightMotorDir" class="text-emerald-400">FORWARD</b></span>
-                <span id="rightMotorVolt" class="text-slate-400">5.4V</span>
-              </div>
-              <div class="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden">
-                <div id="rightMotorBar" class="bg-cyan-500 h-full transition-all duration-75" style="width: 66%;"></div>
-              </div>
-            </div>
+        <!-- Live Quick Tuning Drawer -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-col gap-3">
+          <div class="flex justify-between items-center border-b border-slate-100 pb-2">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-800">Live Control Tuning</h3>
+            <span class="text-[10px] font-mono text-slate-400">Real-time update</span>
           </div>
 
-          <div class="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-slate-800">
-            <div class="p-2 rounded-lg bg-[#090d16] border border-slate-800">
-              <span class="text-[10px] text-slate-500 block">Battery Output</span>
-              <span id="statBattOutput" class="font-mono font-semibold text-amber-400">7.40 V</span>
+          <div class="space-y-2.5 text-xs">
+            <div>
+              <div class="flex justify-between text-slate-700 font-medium mb-1">
+                <span>Kp (Proportional):</span>
+                <span id="liveKpVal" class="font-mono font-bold text-sky-700">6.0</span>
+              </div>
+              <input type="range" id="liveKpSlider" min="0" max="16" step="0.5" value="6.0" class="w-full accent-sky-600 cursor-pointer">
             </div>
-            <div class="p-2 rounded-lg bg-[#090d16] border border-slate-800">
-              <span class="text-[10px] text-slate-500 block">Driver V-Drop</span>
-              <span id="statDriverDrop" class="font-mono font-semibold text-rose-400">-2.00 V (L298N)</span>
+
+            <div>
+              <div class="flex justify-between text-slate-700 font-medium mb-1">
+                <span>Kd (Derivative):</span>
+                <span id="liveKdVal" class="font-mono font-bold text-indigo-700">8.0</span>
+              </div>
+              <input type="range" id="liveKdSlider" min="0" max="30" step="1.0" value="8.0" class="w-full accent-indigo-600 cursor-pointer">
+            </div>
+
+            <div>
+              <div class="flex justify-between text-slate-700 font-medium mb-1">
+                <span>Base Cruise Speed:</span>
+                <span id="liveBaseSpeedVal" class="font-mono font-bold text-slate-800">160 / 170</span>
+              </div>
+              <input type="range" id="liveBaseSpeedSlider" min="60" max="230" step="5" value="160" class="w-full accent-slate-700 cursor-pointer">
+            </div>
+
+            <div>
+              <div class="flex justify-between text-slate-700 font-medium mb-1">
+                <span>Recovery Spin Speed:</span>
+                <span id="liveSpinSpeedVal" class="font-mono font-bold text-rose-700">120</span>
+              </div>
+              <input type="range" id="liveSpinSpeedSlider" min="60" max="200" step="5" value="120" class="w-full accent-rose-600 cursor-pointer">
             </div>
           </div>
         </div>
 
-        <!-- Serial Monitor Peek -->
-        <div class="bg-[#111827] border border-slate-800 rounded-2xl p-4 shadow-sm flex flex-col gap-2 flex-1">
-          <div class="flex items-center justify-between">
-            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+        <!-- Serial Monitor Console -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-col gap-2 flex-1">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
               <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              Virtual Serial Monitor (9600 baud)
+              Serial Monitor (9600 baud)
             </h3>
-            <button id="btnClearSerial" class="text-[10px] text-slate-400 hover:text-white">Clear</button>
+            <button id="btnClearSerial" class="text-[10px] text-slate-500 hover:text-slate-800 font-medium">Clear</button>
           </div>
-          <div id="serialMonitorBox" class="bg-[#090d16] border border-slate-800 rounded-xl p-2.5 font-mono text-[11px] text-emerald-400 overflow-y-auto h-32 leading-relaxed">
+          <div id="serialMonitorBox" class="bg-slate-50 border border-slate-200 rounded-xl p-3 font-mono text-[11px] text-slate-700 overflow-y-auto h-32 leading-relaxed">
             [System] Arduino Nano booted.<br>
-            [System] Sketch initialized successfully.<br>
+            [System] Robot hardware ready. Initializing sensors...<br>
           </div>
         </div>
 
@@ -233,100 +285,106 @@
     <!-- ========================================== -->
     <!-- TAB 2: CAD & HARDWARE BUILDER -->
     <!-- ========================================== -->
-    <section id="panel-cad" class="tab-panel hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+    <section id="panel-cad" class="tab-content hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
       
       <!-- 1. Microcontroller Board -->
-      <div class="bg-[#111827] border border-slate-800 rounded-2xl p-5 shadow-sm flex flex-col gap-4">
-        <div class="flex items-center gap-2 border-b border-slate-800 pb-3">
-          <div class="p-2 bg-sky-500/10 text-sky-400 rounded-lg">🔌</div>
+      <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col gap-4">
+        <div class="flex items-center gap-3 border-b border-slate-100 pb-3">
+          <div class="w-9 h-9 rounded-lg bg-sky-50 text-sky-700 border border-sky-200 flex items-center justify-center font-bold text-sm">
+            MCU
+          </div>
           <div>
-            <h3 class="text-sm font-bold text-white">Microcontroller Board</h3>
-            <p class="text-[11px] text-slate-400">Select processor, clock & I/O specs</p>
+            <h3 class="text-sm font-bold text-slate-900">Microcontroller Board</h3>
+            <p class="text-xs text-slate-500">Select processor, logic level & I/O</p>
           </div>
         </div>
 
         <div>
-          <label class="block text-xs font-medium text-slate-300 mb-1">Board Model</label>
-          <select id="cadBoardSelect" class="w-full bg-[#090d16] border border-slate-700 rounded-lg px-3 py-2 text-xs text-sky-400 outline-none">
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Board Model</label>
+          <select id="cadBoardSelect" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-800 outline-none focus:border-sky-500">
             <option value="nano" selected>Arduino Nano (ATmega328P, 16MHz, 5V)</option>
             <option value="uno">Arduino Uno R3 (ATmega328P, 16MHz, 5V)</option>
             <option value="mega">Arduino Mega 2560 (ATmega2560, 54 I/O, 5V)</option>
-            <option value="esp32">ESP32 DevKit V1 (Tensilica 240MHz, 3.3V)</option>
+            <option value="esp32">ESP32 DevKit V1 (240MHz Dual Core, 3.3V)</option>
             <option value="stm32">STM32 BluePill (ARM Cortex-M3 72MHz, 3.3V)</option>
             <option value="pico">Raspberry Pi Pico (RP2040 Dual 133MHz, 3.3V)</option>
           </select>
         </div>
 
-        <div id="boardSpecsCard" class="p-3 bg-[#090d16] rounded-xl border border-slate-800 text-xs space-y-1.5 text-slate-400 font-mono">
-          <div class="flex justify-between"><span>Digital I/O Pins:</span><span class="text-white font-bold">14 (D0 - D13)</span></div>
-          <div class="flex justify-between"><span>Analog Pins:</span><span class="text-white font-bold">8 (A0 - A7)</span></div>
-          <div class="flex justify-between"><span>PWM Outputs:</span><span class="text-emerald-400 font-bold">6 (Pins 3,5,6,9,10,11)</span></div>
-          <div class="flex justify-between"><span>Operating Voltage:</span><span class="text-white font-bold">5.0 V</span></div>
+        <div id="boardSpecsCard" class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-1.5 font-mono text-slate-600">
+          <div class="flex justify-between"><span>Digital I/O Pins:</span><span class="text-slate-900 font-semibold">14 (D0 - D13)</span></div>
+          <div class="flex justify-between"><span>Analog Pins:</span><span class="text-slate-900 font-semibold">8 (A0 - A7)</span></div>
+          <div class="flex justify-between"><span>Hardware PWM:</span><span class="text-sky-700 font-semibold">6 Pins (3,5,6,9,10,11)</span></div>
+          <div class="flex justify-between"><span>Operating Voltage:</span><span class="text-slate-900 font-semibold">5.0 V</span></div>
         </div>
       </div>
 
       <!-- 2. Sensor Array Configuration -->
-      <div class="bg-[#111827] border border-slate-800 rounded-2xl p-5 shadow-sm flex flex-col gap-4">
-        <div class="flex items-center gap-2 border-b border-slate-800 pb-3">
-          <div class="p-2 bg-emerald-500/10 text-emerald-400 rounded-lg">👁️</div>
+      <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col gap-4">
+        <div class="flex items-center gap-3 border-b border-slate-100 pb-3">
+          <div class="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center font-bold text-sm">
+            OPT
+          </div>
           <div>
-            <h3 class="text-sm font-bold text-white">Sensor Array</h3>
-            <p class="text-[11px] text-slate-400">Configure reflectance IR sensors</p>
+            <h3 class="text-sm font-bold text-slate-900">Optical Sensor Array</h3>
+            <p class="text-xs text-slate-500">Reflectance sensors & geometry</p>
           </div>
         </div>
 
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs font-medium text-slate-300 mb-1">Sensor Mode</label>
-            <select id="cadSensorMode" class="w-full bg-[#090d16] border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-emerald-400 outline-none">
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Sensor Mode</label>
+            <select id="cadSensorMode" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2 text-xs text-slate-800 outline-none">
               <option value="digital" selected>Digital (Comparator)</option>
               <option value="analog">Analog (0 - 1023)</option>
             </select>
           </div>
           <div>
-            <label class="block text-xs font-medium text-slate-300 mb-1">Sensor Count</label>
-            <select id="cadSensorCount" class="w-full bg-[#090d16] border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-emerald-400 outline-none">
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Sensor Count</label>
+            <select id="cadSensorCount" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2 text-xs text-slate-800 outline-none">
               <option value="2">2 Sensors</option>
               <option value="4">4 Sensors</option>
               <option value="5">5 Sensors</option>
               <option value="6">6 Sensors</option>
               <option value="8" selected>8 Sensors (Standard)</option>
               <option value="12">12 Sensors</option>
-              <option value="16">16 Sensors (Wide bar)</option>
+              <option value="16">16 Sensors (Wide)</option>
             </select>
           </div>
         </div>
 
         <div>
-          <div class="flex justify-between text-xs text-slate-300 mb-1">
+          <div class="flex justify-between text-xs text-slate-700 font-medium mb-1">
             <span>Sensor Pitch / Spacing:</span>
-            <span id="cadPitchVal" class="font-mono text-emerald-400 font-bold">10 mm</span>
+            <span id="cadPitchVal" class="font-mono text-emerald-700 font-bold">10 mm</span>
           </div>
-          <input type="range" id="cadPitchSlider" min="5" max="25" step="1" value="10" class="w-full accent-emerald-500 cursor-pointer">
+          <input type="range" id="cadPitchSlider" min="5" max="25" step="1" value="10" class="w-full accent-emerald-600 cursor-pointer">
         </div>
 
         <div>
-          <div class="flex justify-between text-xs text-slate-300 mb-1">
-            <span>Forward Offset (from Axle):</span>
-            <span id="cadOffsetVal" class="font-mono text-emerald-400 font-bold">85 mm</span>
+          <div class="flex justify-between text-xs text-slate-700 font-medium mb-1">
+            <span>Forward Offset from Axle:</span>
+            <span id="cadOffsetVal" class="font-mono text-emerald-700 font-bold">85 mm</span>
           </div>
-          <input type="range" id="cadOffsetSlider" min="40" max="180" step="5" value="85" class="w-full accent-emerald-500 cursor-pointer">
+          <input type="range" id="cadOffsetSlider" min="40" max="180" step="5" value="85" class="w-full accent-emerald-600 cursor-pointer">
         </div>
       </div>
 
-      <!-- 3. Motor Driver & H-Bridge -->
-      <div class="bg-[#111827] border border-slate-800 rounded-2xl p-5 shadow-sm flex flex-col gap-4">
-        <div class="flex items-center gap-2 border-b border-slate-800 pb-3">
-          <div class="p-2 bg-indigo-500/10 text-indigo-400 rounded-lg">⚙️</div>
+      <!-- 3. Motor Driver & Efficiency -->
+      <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col gap-4">
+        <div class="flex items-center gap-3 border-b border-slate-100 pb-3">
+          <div class="w-9 h-9 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center justify-center font-bold text-sm">
+            DVR
+          </div>
           <div>
-            <h3 class="text-sm font-bold text-white">Motor Driver Model</h3>
-            <p class="text-[11px] text-slate-400">H-Bridge type & voltage drop efficiency</p>
+            <h3 class="text-sm font-bold text-slate-900">Motor Driver Model</h3>
+            <p class="text-xs text-slate-500">H-Bridge type & voltage drop efficiency</p>
           </div>
         </div>
 
         <div>
-          <label class="block text-xs font-medium text-slate-300 mb-1">Driver IC / Board</label>
-          <select id="cadDriverSelect" class="w-full bg-[#090d16] border border-slate-700 rounded-lg px-3 py-2 text-xs text-indigo-400 outline-none">
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Driver IC / Board</label>
+          <select id="cadDriverSelect" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-800 outline-none">
             <option value="l298n" selected>L298N Dual H-Bridge (~2.0V BJT Drop)</option>
             <option value="tb6612">TB6612FNG Dual MOSFET (~0.2V Low Drop)</option>
             <option value="drv8833">DRV8833 Dual H-Bridge (~0.3V Drop)</option>
@@ -335,66 +393,70 @@
           </select>
         </div>
 
-        <div id="driverSpecsCard" class="p-3 bg-[#090d16] rounded-xl border border-slate-800 text-xs space-y-1.5 text-slate-400 font-mono">
-          <div class="flex justify-between"><span>Technology:</span><span class="text-white font-bold">BJT Darlington</span></div>
-          <div class="flex justify-between"><span>Internal V-Drop:</span><span class="text-rose-400 font-bold">-2.0 V</span></div>
-          <div class="flex justify-between"><span>Max Current:</span><span class="text-white font-bold">2.0 A / Channel</span></div>
-          <div class="flex justify-between"><span>Control Pins:</span><span class="text-white font-bold">IN1-IN4, ENA, ENB</span></div>
+        <div id="driverSpecsCard" class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-1.5 font-mono text-slate-600">
+          <div class="flex justify-between"><span>Technology:</span><span class="text-slate-900 font-semibold">BJT Darlington</span></div>
+          <div class="flex justify-between"><span>Internal V-Drop:</span><span class="text-rose-600 font-bold">-2.0 V</span></div>
+          <div class="flex justify-between"><span>Max Current:</span><span class="text-slate-900 font-semibold">2.0 A / Ch</span></div>
+          <div class="flex justify-between"><span>Control Inputs:</span><span class="text-slate-900 font-semibold">IN1-IN4, ENA, ENB</span></div>
         </div>
       </div>
 
       <!-- 4. Battery & Power System -->
-      <div class="bg-[#111827] border border-slate-800 rounded-2xl p-5 shadow-sm flex flex-col gap-4">
-        <div class="flex items-center gap-2 border-b border-slate-800 pb-3">
-          <div class="p-2 bg-amber-500/10 text-amber-400 rounded-lg">🔋</div>
+      <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col gap-4">
+        <div class="flex items-center gap-3 border-b border-slate-100 pb-3">
+          <div class="w-9 h-9 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 flex items-center justify-center font-bold text-sm">
+            BAT
+          </div>
           <div>
-            <h3 class="text-sm font-bold text-white">Battery & Power Pack</h3>
-            <p class="text-[11px] text-slate-400">Determines motor torque and max speed</p>
+            <h3 class="text-sm font-bold text-slate-900">Battery & Power Pack</h3>
+            <p class="text-xs text-slate-500">Affects motor torque and top speed</p>
           </div>
         </div>
 
         <div>
-          <label class="block text-xs font-medium text-slate-300 mb-1">Battery Type</label>
-          <select id="cadBatterySelect" class="w-full bg-[#090d16] border border-slate-700 rounded-lg px-3 py-2 text-xs text-amber-400 outline-none">
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Battery Type</label>
+          <select id="cadBatterySelect" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-800 outline-none">
             <option value="7.4" selected>2S LiPo (7.4V Nominal, 8.4V Peak)</option>
             <option value="11.1">3S LiPo (11.1V Nominal, 12.6V Peak)</option>
             <option value="3.7">1S LiPo (3.7V Nominal, 4.2V Peak)</option>
             <option value="6.0">4x AA Alkaline / NiMH (6.0V)</option>
             <option value="9.0">9V Block (High Internal Resistance)</option>
-            <option value="custom">Custom Voltage</option>
+            <option value="custom">Custom Voltage Slider</option>
           </select>
         </div>
 
         <div id="customVoltBox" class="hidden">
-          <div class="flex justify-between text-xs text-slate-300 mb-1">
+          <div class="flex justify-between text-xs text-slate-700 font-medium mb-1">
             <span>Custom Output Voltage:</span>
-            <span id="customVoltVal" class="font-mono text-amber-400 font-bold">7.4 V</span>
+            <span id="customVoltVal" class="font-mono text-amber-700 font-bold">7.4 V</span>
           </div>
-          <input type="range" id="customVoltSlider" min="3.0" max="15.0" step="0.1" value="7.4" class="w-full accent-amber-500 cursor-pointer">
+          <input type="range" id="customVoltSlider" min="3.0" max="15.0" step="0.1" value="7.4" class="w-full accent-amber-600 cursor-pointer">
         </div>
 
-        <div class="p-3 bg-[#090d16] rounded-xl border border-slate-800 text-xs space-y-1 text-slate-300 font-mono">
+        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-1 font-mono text-slate-600">
           <div class="flex justify-between">
             <span>Effective Motor Voltage:</span>
-            <span id="effectiveMotorVolt" class="text-emerald-400 font-bold">5.40 V</span>
+            <span id="effectiveMotorVolt" class="text-emerald-700 font-bold">5.40 V</span>
           </div>
-          <p class="text-[10px] text-slate-500">Effective = Battery Voltage minus Driver Drop.</p>
+          <p class="text-[10px] text-slate-400">Effective = Battery Voltage minus Driver Drop.</p>
         </div>
       </div>
 
-      <!-- 5. Chassis & Mechanical Geometry -->
-      <div class="bg-[#111827] border border-slate-800 rounded-2xl p-5 shadow-sm flex flex-col gap-4">
-        <div class="flex items-center gap-2 border-b border-slate-800 pb-3">
-          <div class="p-2 bg-purple-500/10 text-purple-400 rounded-lg">📐</div>
+      <!-- 5. Chassis & Mechanics -->
+      <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col gap-4">
+        <div class="flex items-center gap-3 border-b border-slate-100 pb-3">
+          <div class="w-9 h-9 rounded-lg bg-purple-50 text-purple-700 border border-purple-200 flex items-center justify-center font-bold text-sm">
+            CAD
+          </div>
           <div>
-            <h3 class="text-sm font-bold text-white">Chassis & Wheels</h3>
-            <p class="text-[11px] text-slate-400">Dimensions, wheel size & body silhouette</p>
+            <h3 class="text-sm font-bold text-slate-900">Chassis & Geometry</h3>
+            <p class="text-xs text-slate-500">Dimensions, wheel size & body silhouette</p>
           </div>
         </div>
 
         <div>
-          <label class="block text-xs font-medium text-slate-300 mb-1">Chassis Body Shape</label>
-          <select id="cadShapeSelect" class="w-full bg-[#090d16] border border-slate-700 rounded-lg px-3 py-2 text-xs text-purple-400 outline-none">
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Chassis Body Shape</label>
+          <select id="cadShapeSelect" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-800 outline-none">
             <option value="wedge" selected>Aerodynamic Tapered Wedge</option>
             <option value="rect">Compact Rectangular Box</option>
             <option value="oval">Rounded Oval / Pill</option>
@@ -403,37 +465,37 @@
         </div>
 
         <div>
-          <div class="flex justify-between text-xs text-slate-300 mb-1">
+          <div class="flex justify-between text-xs text-slate-700 font-medium mb-1">
             <span>Wheelbase Width:</span>
-            <span id="cadWheelbaseVal" class="font-mono text-purple-400 font-bold">120 mm</span>
+            <span id="cadWheelbaseVal" class="font-mono text-purple-700 font-bold">120 mm</span>
           </div>
-          <input type="range" id="cadWheelbaseSlider" min="80" max="220" step="5" value="120" class="w-full accent-purple-500 cursor-pointer">
+          <input type="range" id="cadWheelbaseSlider" min="80" max="220" step="5" value="120" class="w-full accent-purple-600 cursor-pointer">
         </div>
 
         <div>
-          <div class="flex justify-between text-xs text-slate-300 mb-1">
+          <div class="flex justify-between text-xs text-slate-700 font-medium mb-1">
             <span>Wheel Diameter:</span>
-            <span id="cadWheelDiamVal" class="font-mono text-purple-400 font-bold">42 mm</span>
+            <span id="cadWheelDiamVal" class="font-mono text-purple-700 font-bold">42 mm</span>
           </div>
-          <input type="range" id="cadWheelDiamSlider" min="25" max="75" step="1" value="42" class="w-full accent-purple-500 cursor-pointer">
+          <input type="range" id="cadWheelDiamSlider" min="25" max="75" step="1" value="42" class="w-full accent-purple-600 cursor-pointer">
         </div>
       </div>
 
-      <!-- 6. Apply Changes Summary Card -->
-      <div class="bg-gradient-to-br from-[#111827] to-[#1e293b] border border-slate-700 rounded-2xl p-5 shadow-lg flex flex-col justify-between">
+      <!-- 6. Apply Summary Card -->
+      <div class="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-2xl p-5 shadow-lg flex flex-col justify-between">
         <div>
-          <h3 class="text-sm font-bold text-white mb-1">Hardware Configuration Active</h3>
+          <h3 class="text-sm font-bold mb-1">Physics & Mechanics Ready</h3>
           <p class="text-xs text-slate-300 leading-relaxed mb-4">
-            Changes to the board, sensor array, battery voltage, and dimensions update the real-time differential drive physics and sensor raycasts immediately.
+            Changes to your chassis, sensor count, and battery pack update the 2D physics engine immediately.
           </p>
-          <div class="p-3 bg-[#090d16]/70 rounded-xl border border-slate-800 text-xs font-mono space-y-1 text-slate-300">
-            <div>• Real-time wheel rotational inertia: <span class="text-sky-400">Dynamic</span></div>
-            <div>• Sensor span: <span id="summarySensorSpan" class="text-emerald-400">70 mm</span></div>
-            <div>• Top velocity: <span id="summaryTopSpeed" class="text-amber-400">~0.78 m/s</span></div>
+          <div class="p-3 bg-white/10 rounded-xl text-xs font-mono space-y-1.5 text-slate-200">
+            <div>• Sensor Span: <span id="summarySensorSpan" class="text-emerald-400 font-bold">70 mm</span></div>
+            <div>• Top Velocity: <span id="summaryTopSpeed" class="text-amber-400 font-bold">~0.78 m/s</span></div>
+            <div>• Real-world Floor: <span class="text-sky-300 font-bold">White Vinyl (Black Tape)</span></div>
           </div>
         </div>
-        <button id="btnApplyHardware" class="w-full mt-4 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs shadow-lg shadow-sky-600/30 transition">
-          Apply & Return to Simulation 🚀
+        <button id="btnApplyHardware" class="w-full mt-4 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs shadow-md transition">
+          Save & Return to Arena 🚀
         </button>
       </div>
 
@@ -442,90 +504,84 @@
     <!-- ========================================== -->
     <!-- TAB 3: WIRING CONNECTOR & PIN MATRIX -->
     <!-- ========================================== -->
-    <section id="panel-wiring" class="tab-panel hidden flex flex-col gap-5">
-      <div class="bg-[#111827] border border-slate-800 rounded-2xl p-5 shadow-sm">
-        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-4 mb-4">
+    <section id="panel-wiring" class="tab-content hidden flex flex-col gap-5">
+      <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4 mb-4">
           <div>
-            <h2 class="text-sm font-bold text-white">Interactive Pin Connection & Wiring Matrix</h2>
-            <p class="text-xs text-slate-400">Route motor driver direction/PWM pins and sensor array I/O directly to your microcontroller pins.</p>
+            <h2 class="text-sm font-bold text-slate-900">Pin Connection & Wiring Matrix</h2>
+            <p class="text-xs text-slate-500">Route motor driver direction/PWM lines and sensor channels directly to your microcontroller I/O pins.</p>
           </div>
-          <div class="flex items-center gap-2">
-            <button id="btnDefaultWiring" class="px-3 py-1.5 rounded-lg bg-sky-600/20 text-sky-400 hover:bg-sky-600/30 border border-sky-500/30 text-xs font-medium transition">
-              Load Your 5-File Project Pinout
-            </button>
-          </div>
+          <button id="btnDefaultWiring" class="px-3 py-1.5 rounded-lg bg-sky-50 text-sky-700 hover:bg-sky-100 border border-sky-200 text-xs font-semibold transition">
+            Load Your 5-File Project Pinout
+          </button>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <!-- Motor Driver Wiring Table -->
           <div class="flex flex-col gap-3">
-            <h3 class="text-xs font-bold uppercase tracking-wider text-indigo-400 flex items-center gap-2">
-              <span>⚙️ Motor Driver Pin Mapping (H-Bridge)</span>
-            </h3>
-            <div class="bg-[#090d16] rounded-xl border border-slate-800 overflow-hidden text-xs">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-800">Motor Driver (H-Bridge) Wiring</h3>
+            <div class="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden text-xs">
               <table class="w-full text-left">
-                <thead class="bg-slate-900/80 text-slate-400 border-b border-slate-800">
+                <thead class="bg-slate-100 text-slate-600 border-b border-slate-200">
                   <tr>
-                    <th class="p-2.5">Driver Terminal</th>
-                    <th class="p-2.5">Function</th>
-                    <th class="p-2.5">Target Microcontroller Pin</th>
+                    <th class="p-2.5">Driver Pin</th>
+                    <th class="p-2.5">Signal Role</th>
+                    <th class="p-2.5">Microcontroller Pin</th>
                   </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-800 font-mono text-slate-300">
+                <tbody class="divide-y divide-slate-200 font-mono text-slate-700">
                   <tr>
-                    <td class="p-2.5 text-white font-bold">inA (IN1)</td>
-                    <td class="p-2.5 text-slate-400">Right Motor Dir 1</td>
-                    <td class="p-2.5"><select class="wire-select bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sky-400 outline-none" data-signal="inA"></select></td>
-                  </tr>
-                  <tr>
-                    <td class="p-2.5 text-white font-bold">inB (IN2)</td>
-                    <td class="p-2.5 text-slate-400">Right Motor Dir 2</td>
-                    <td class="p-2.5"><select class="wire-select bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sky-400 outline-none" data-signal="inB"></select></td>
+                    <td class="p-2.5 font-bold text-slate-900">inA (IN1)</td>
+                    <td class="p-2.5 text-slate-500">Right Motor Dir 1</td>
+                    <td class="p-2.5"><select class="wire-select bg-white border border-slate-300 rounded px-2 py-1 text-slate-800 outline-none" data-signal="inA"></select></td>
                   </tr>
                   <tr>
-                    <td class="p-2.5 text-white font-bold">inC (IN3)</td>
-                    <td class="p-2.5 text-slate-400">Left Motor Dir 1</td>
-                    <td class="p-2.5"><select class="wire-select bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sky-400 outline-none" data-signal="inC"></select></td>
+                    <td class="p-2.5 font-bold text-slate-900">inB (IN2)</td>
+                    <td class="p-2.5 text-slate-500">Right Motor Dir 2</td>
+                    <td class="p-2.5"><select class="wire-select bg-white border border-slate-300 rounded px-2 py-1 text-slate-800 outline-none" data-signal="inB"></select></td>
                   </tr>
                   <tr>
-                    <td class="p-2.5 text-white font-bold">inD (IN4)</td>
-                    <td class="p-2.5 text-slate-400">Left Motor Dir 2</td>
-                    <td class="p-2.5"><select class="wire-select bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sky-400 outline-none" data-signal="inD"></select></td>
+                    <td class="p-2.5 font-bold text-slate-900">inC (IN3)</td>
+                    <td class="p-2.5 text-slate-500">Left Motor Dir 1</td>
+                    <td class="p-2.5"><select class="wire-select bg-white border border-slate-300 rounded px-2 py-1 text-slate-800 outline-none" data-signal="inC"></select></td>
                   </tr>
-                  <tr class="bg-sky-500/5">
-                    <td class="p-2.5 text-emerald-400 font-bold">enA (ENA)</td>
-                    <td class="p-2.5 text-slate-400">Right Speed PWM</td>
-                    <td class="p-2.5"><select class="wire-select bg-slate-900 border border-emerald-700 rounded px-2 py-1 text-emerald-400 outline-none" data-signal="enA"></select></td>
+                  <tr>
+                    <td class="p-2.5 font-bold text-slate-900">inD (IN4)</td>
+                    <td class="p-2.5 text-slate-500">Left Motor Dir 2</td>
+                    <td class="p-2.5"><select class="wire-select bg-white border border-slate-300 rounded px-2 py-1 text-slate-800 outline-none" data-signal="inD"></select></td>
                   </tr>
-                  <tr class="bg-sky-500/5">
-                    <td class="p-2.5 text-emerald-400 font-bold">enB (ENB)</td>
-                    <td class="p-2.5 text-slate-400">Left Speed PWM</td>
-                    <td class="p-2.5"><select class="wire-select bg-slate-900 border border-emerald-700 rounded px-2 py-1 text-emerald-400 outline-none" data-signal="enB"></select></td>
+                  <tr class="bg-sky-50/50">
+                    <td class="p-2.5 font-bold text-sky-800">enA (ENA)</td>
+                    <td class="p-2.5 text-slate-500">Right Speed (PWM)</td>
+                    <td class="p-2.5"><select class="wire-select bg-white border border-sky-300 rounded px-2 py-1 text-sky-800 font-semibold outline-none" data-signal="enA"></select></td>
+                  </tr>
+                  <tr class="bg-sky-50/50">
+                    <td class="p-2.5 font-bold text-sky-800">enB (ENB)</td>
+                    <td class="p-2.5 text-slate-500">Left Speed (PWM)</td>
+                    <td class="p-2.5"><select class="wire-select bg-white border border-sky-300 rounded px-2 py-1 text-sky-800 font-semibold outline-none" data-signal="enB"></select></td>
                   </tr>
                 </tbody>
               </table>
             </div>
-            <div id="pwmWarningBox" class="hidden p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-medium">
-              ⚠️ Warning: Make sure ENA and ENB are connected to PWM-capable pins (e.g., 3, 5, 6, 9, 10, 11 on Arduino Uno/Nano).
+            <div id="pwmWarningBox" class="hidden p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs font-medium">
+              ⚠️ Warning: Make sure ENA and ENB are connected to hardware PWM-capable pins.
             </div>
           </div>
 
-          <!-- Sensor Array Pins Table -->
+          <!-- Sensor Array Wiring Table -->
           <div class="flex flex-col gap-3">
-            <h3 class="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-2">
-              <span>👁️ Sensor Array Terminal Connections</span>
-            </h3>
-            <div class="bg-[#090d16] rounded-xl border border-slate-800 overflow-hidden text-xs max-h-80 overflow-y-auto">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-800">Sensor Array Channels</h3>
+            <div class="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden text-xs max-h-80 overflow-y-auto">
               <table class="w-full text-left">
-                <thead class="bg-slate-900/80 text-slate-400 border-b border-slate-800 sticky top-0">
+                <thead class="bg-slate-100 text-slate-600 border-b border-slate-200 sticky top-0">
                   <tr>
                     <th class="p-2.5">Sensor Channel</th>
                     <th class="p-2.5">Array Position</th>
                     <th class="p-2.5">Microcontroller Input Pin</th>
                   </tr>
                 </thead>
-                <tbody id="sensorWireRows" class="divide-y divide-slate-800 font-mono text-slate-300">
-                  <!-- Dynamically populated according to sensor count -->
+                <tbody id="sensorWireRows" class="divide-y divide-slate-200 font-mono text-slate-700">
+                  <!-- Populated according to sensor count -->
                 </tbody>
               </table>
             </div>
@@ -537,51 +593,47 @@
     <!-- ========================================== -->
     <!-- TAB 4: MULTI-FILE ARDUINO IDE & COMPILER -->
     <!-- ========================================== -->
-    <section id="panel-ide" class="tab-panel hidden flex flex-col gap-3">
-      <div class="bg-[#111827] border border-slate-800 rounded-2xl overflow-hidden shadow-2xl flex flex-col h-[650px]">
+    <section id="panel-ide" class="tab-content hidden flex flex-col gap-3">
+      <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm flex flex-col h-[650px]">
         
-        <!-- IDE Tab Bar & Actions -->
-        <div class="bg-[#090d16] border-b border-slate-800 px-3 py-2 flex flex-wrap items-center justify-between gap-2">
-          <!-- File Tabs -->
-          <div id="ideFileTabs" class="flex items-center gap-1 overflow-x-auto">
-            <!-- Populated with .ino tabs -->
+        <!-- Tab Bar & Actions -->
+        <div class="bg-slate-50 border-b border-slate-200 px-4 py-2 flex flex-wrap items-center justify-between gap-2">
+          <div id="ideFileTabs" class="flex items-center gap-1.5 overflow-x-auto">
+            <!-- Tabs populated here -->
           </div>
 
-          <!-- IDE Action Buttons -->
           <div class="flex items-center gap-2">
-            <button id="btnNewFile" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition" title="Add a new .ino or .h file">
+            <button id="btnNewFile" class="px-2.5 py-1 rounded bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold border border-slate-200 shadow-2xs transition">
               + New File
             </button>
-            <button id="btnUploadIno" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition" title="Upload an .ino file from disk">
-              📁 Upload .ino
+            <button id="btnUploadIno" class="px-2.5 py-1 rounded bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold border border-slate-200 shadow-2xs transition">
+              📁 Upload
             </button>
             <input type="file" id="fileUploadInput" accept=".ino,.cpp,.h,.c" class="hidden">
-            <button id="btnExportFiles" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition" title="Download your sketch files">
+            <button id="btnExportFiles" class="px-2.5 py-1 rounded bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold border border-slate-200 shadow-2xs transition">
               💾 Download
             </button>
-            <button id="btnCompileRun" class="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow transition flex items-center gap-1">
+            <button id="btnCompileRun" class="px-3.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm transition flex items-center gap-1">
               <span>⚡ Compile & Flash</span>
             </button>
           </div>
         </div>
 
-        <!-- Editor Code Viewport -->
-        <div class="flex-1 relative flex">
-          <!-- Line Numbers -->
-          <div id="ideLineNumbers" class="w-12 bg-[#090d16] text-slate-600 border-r border-slate-800 py-3 text-right pr-3 font-mono text-xs select-none overflow-hidden leading-relaxed">
-            1<br>2<br>3<br>4<br>5
+        <!-- Code Editor Viewport -->
+        <div class="flex-1 relative flex bg-white">
+          <div id="ideLineNumbers" class="w-12 bg-slate-50 text-slate-400 border-r border-slate-200 py-3 text-right pr-3 font-mono text-xs select-none overflow-hidden leading-relaxed">
+            1<br>2<br>3
           </div>
-          <!-- Textarea Editor -->
-          <textarea id="ideCodeArea" spellcheck="false" class="code-editor flex-1 bg-[#0e1320] text-slate-100 p-3 text-xs leading-relaxed outline-none resize-none overflow-y-auto whitespace-pre font-mono"></textarea>
+          <textarea id="ideCodeArea" spellcheck="false" class="code-editor flex-1 bg-white text-slate-900 p-3 text-xs leading-relaxed outline-none resize-none overflow-y-auto whitespace-pre font-mono"></textarea>
         </div>
 
-        <!-- IDE Compiler Output Console -->
-        <div class="bg-[#090d16] border-t border-slate-800 p-3 flex flex-col gap-1 max-h-36 overflow-y-auto">
+        <!-- Compiler Diagnostic Console -->
+        <div class="bg-slate-50 border-t border-slate-200 p-3 flex flex-col gap-1 max-h-36 overflow-y-auto">
           <div class="flex justify-between items-center text-[10px] uppercase font-bold tracking-wider text-slate-500">
-            <span>Compiler Output / Diagnostic</span>
-            <span id="compilerStatus" class="text-emerald-400">Ready</span>
+            <span>Compiler Diagnostic</span>
+            <span id="compilerStatus" class="text-emerald-700">Ready</span>
           </div>
-          <div id="compilerLog" class="font-mono text-[11px] text-slate-300 space-y-0.5">
+          <div id="compilerLog" class="font-mono text-[11px] text-slate-700 space-y-0.5">
             Sketch contains 5 concatenated files: [c_line_follower.ino, initialization.ino, main.ino, motor_driver.ino, sensor.ino].
           </div>
         </div>
@@ -592,58 +644,58 @@
     <!-- ========================================== -->
     <!-- TAB 5: TRACK & MAP STUDIO -->
     <!-- ========================================== -->
-    <section id="panel-tracks" class="tab-panel hidden flex flex-col gap-5">
-      <div class="bg-[#111827] border border-slate-800 rounded-2xl p-5 shadow-sm">
-        <h2 class="text-sm font-bold text-white mb-1">Track Presets & Geometry Customizer</h2>
-        <p class="text-xs text-slate-400 mb-4">Choose challenge circuits or draw completely custom competition tracks with arbitrary curvatures and intersections.</p>
+    <section id="panel-tracks" class="tab-content hidden flex flex-col gap-5">
+      <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+        <h2 class="text-sm font-bold text-slate-900 mb-1">Track Circuits & Custom Map Drawing</h2>
+        <p class="text-xs text-slate-500 mb-4">Choose from official competition circuits or draw any custom course directly on the white canvas.</p>
 
         <!-- Track Presets Grid -->
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-5">
-          <button class="track-card p-3 rounded-xl bg-[#090d16] border border-sky-500/40 text-left hover:border-sky-400 transition" data-track="circuit">
-            <span class="text-xs font-bold text-white block mb-1">Grand Prix Circuit</span>
-            <span class="text-[11px] text-slate-400 block">Wide sweeping bends and long straights.</span>
+          <button class="track-card p-3.5 rounded-xl bg-slate-50 border border-sky-500 text-left hover:border-sky-600 shadow-2xs transition" data-track="circuit">
+            <span class="text-xs font-bold text-slate-900 block mb-1">Grand Prix Circuit</span>
+            <span class="text-[11px] text-slate-500 block">Wide sweeping bends and long straights.</span>
           </button>
-          <button class="track-card p-3 rounded-xl bg-[#090d16] border border-slate-800 text-left hover:border-slate-600 transition" data-track="figure8">
-            <span class="text-xs font-bold text-white block mb-1">Figure-8 / S-Curves</span>
-            <span class="text-[11px] text-slate-400 block">Fast curvature reversal testing derivative damping.</span>
+          <button class="track-card p-3.5 rounded-xl bg-white border border-slate-200 text-left hover:border-slate-400 transition" data-track="figure8">
+            <span class="text-xs font-bold text-slate-900 block mb-1">Figure-8 / S-Curves</span>
+            <span class="text-[11px] text-slate-500 block">Fast curvature flips testing derivative damping.</span>
           </button>
-          <button class="track-card p-3 rounded-xl bg-[#090d16] border border-slate-800 text-left hover:border-slate-600 transition" data-track="sharp">
-            <span class="text-xs font-bold text-white block mb-1">90° Corner Challenge</span>
-            <span class="text-[11px] text-slate-400 block">Right angles testing search & recovery turns.</span>
+          <button class="track-card p-3.5 rounded-xl bg-white border border-slate-200 text-left hover:border-slate-400 transition" data-track="sharp">
+            <span class="text-xs font-bold text-slate-900 block mb-1">90° Corner Challenge</span>
+            <span class="text-[11px] text-slate-500 block">Right angles testing search & recovery turns.</span>
           </button>
-          <button class="track-card p-3 rounded-xl bg-[#090d16] border border-slate-800 text-left hover:border-slate-600 transition" data-track="slalom">
-            <span class="text-xs font-bold text-white block mb-1">Slalom & Hairpins</span>
-            <span class="text-[11px] text-slate-400 block">Tight serpentines testing high-gain agility.</span>
+          <button class="track-card p-3.5 rounded-xl bg-white border border-slate-200 text-left hover:border-slate-400 transition" data-track="slalom">
+            <span class="text-xs font-bold text-slate-900 block mb-1">Slalom & Hairpins</span>
+            <span class="text-[11px] text-slate-500 block">Tight serpentines testing high-gain agility.</span>
           </button>
-          <button class="track-card p-3 rounded-xl bg-[#090d16] border border-slate-800 text-left hover:border-slate-600 transition" data-track="cross">
-            <span class="text-xs font-bold text-white block mb-1">Cross Intersection</span>
-            <span class="text-[11px] text-slate-400 block">Intersection crossings testing center weight bias.</span>
+          <button class="track-card p-3.5 rounded-xl bg-white border border-slate-200 text-left hover:border-slate-400 transition" data-track="cross">
+            <span class="text-xs font-bold text-slate-900 block mb-1">Cross Intersection</span>
+            <span class="text-[11px] text-slate-500 block">Intersection crossings testing line weighting.</span>
           </button>
         </div>
 
-        <!-- Track Parameters & Custom Draw -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-slate-800">
+        <!-- Track Parameters -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5 pt-4 border-t border-slate-100">
           <div>
-            <div class="flex justify-between text-xs text-slate-300 mb-1">
-              <span>Track Line Width:</span>
-              <span id="trackWidthVal" class="font-mono text-sky-400 font-bold">20 mm</span>
+            <div class="flex justify-between text-xs text-slate-700 font-semibold mb-1">
+              <span>Black Line Width:</span>
+              <span id="trackWidthVal" class="font-mono text-sky-700 font-bold">25 mm (Standard)</span>
             </div>
-            <input type="range" id="trackWidthSlider" min="10" max="50" step="2" value="20" class="w-full accent-sky-500 cursor-pointer">
+            <input type="range" id="trackWidthSlider" min="10" max="50" step="1" value="25" class="w-full accent-sky-600 cursor-pointer">
           </div>
 
           <div>
-            <label class="block text-xs font-medium text-slate-300 mb-1">Line / Floor Contrast</label>
-            <select id="trackColorSelect" class="w-full bg-[#090d16] border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-300 outline-none">
-              <option value="white-on-black" selected>White Line on Dark Floor (Default)</option>
-              <option value="black-on-white">Black Line on Light Floor (Inverted)</option>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Floor & Line Contrast</label>
+            <select id="trackColorSelect" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-800 outline-none">
+              <option value="black-on-white" selected>Black Line on White Surface (Standard Arena)</option>
+              <option value="white-on-black">White Line on Dark Surface (Inverted)</option>
             </select>
           </div>
 
           <div class="flex items-end gap-2">
-            <button id="btnStartCustomDraw" class="flex-1 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-medium text-xs shadow transition">
-              ✏️ Freehand Draw Mode
+            <button id="btnStartCustomDraw" class="flex-1 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs shadow-sm transition">
+              ✏️ Draw Custom Track
             </button>
-            <button id="btnClearCustomDraw" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition">
+            <button id="btnClearCustomDraw" class="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium transition">
               Clear
             </button>
           </div>
@@ -653,11 +705,11 @@
 
   </main>
 
-  <!-- JAVASCRIPT SIMULATION, CAD & COMPILER ENGINE -->
+  <!-- ========================================== -->
+  <!-- JAVASCRIPT SIMULATOR LOGIC & HAL ENGINE -->
+  <!-- ========================================== -->
   <script>
-    // =========================================================================
-    // 1. SKETCH REPOSITORY (Pre-loaded with user's 5 refactored files)
-    // =========================================================================
+    // --- SKETCH FILES REPOSITORY ---
     const sketchFiles = {
       "c_line_follower.ino": `#define inA     11
 #define inB     10
@@ -724,7 +776,7 @@ void loop() {
   bool sensorReading[NUM_SENSORS];
 
   for(int i = 0; i < NUM_SENSORS; i++){
-    // Active LOW: LOW (0) means line detected
+    // In Arduino code: active LOW (0 means black line detected)
     sensorReading[i] = (digitalRead(sensorPins[i]) == LOW);
     if(sensorReading[i]){
       sumS++;
@@ -821,9 +873,7 @@ void loop() {
 
     let currentActiveFile = "c_line_follower.ino";
 
-    // =========================================================================
-    // 2. HARDWARE SPECIFICATIONS & CONFIGURATION STATE
-    // =========================================================================
+    // --- HARDWARE CONFIGURATION & DEFINITIONS ---
     const boardDefinitions = {
       nano: { name: "Arduino Nano", digitalPins: 14, analogPins: 8, pwm: [3, 5, 6, 9, 10, 11], volt: 5.0 },
       uno: { name: "Arduino Uno R3", digitalPins: 14, analogPins: 6, pwm: [3, 5, 6, 9, 10, 11], volt: 5.0 },
@@ -854,42 +904,23 @@ void loop() {
       wheelDiamMm: 42
     };
 
-    // Wiring Map (signal -> microcontroller pin name)
     let wiringMap = {
-      inA: "11",
-      inB: "10",
-      inC: "9",
-      inD: "8",
-      enA: "6",
-      enB: "5",
+      inA: "11", inB: "10", inC: "9", inD: "8", enA: "6", enB: "5",
       sensors: ["3", "2", "A5", "A4", "A2", "A1", "A3", "A0"]
     };
 
-    // =========================================================================
-    // 3. VIRTUAL ARDUINO RUNTIME ENGINE & HAL
-    // =========================================================================
+    // --- VIRTUAL ARDUINO RUNTIME ENGINE ---
     class VirtualArduinoEngine {
       constructor() {
         this.pinModes = {};
         this.digitalPins = {};
         this.pwmPins = {};
         this.analogPins = {};
-        this.serialBuffer = [];
-        this.isRunning = false;
-        this.errorState = null;
-        this.compiledFn = null;
-      }
-
-      resetPins() {
-        this.pinModes = {};
-        this.digitalPins = {};
-        this.pwmPins = {};
-        this.analogPins = {};
+        this.runtimeHarness = null;
       }
 
       compile(filesObj) {
         try {
-          // 1. Concatenate .ino files (main sketch first, then remaining alphabetically)
           let fileNames = Object.keys(filesObj).sort();
           if (fileNames.includes("c_line_follower.ino")) {
             fileNames = ["c_line_follower.ino", ...fileNames.filter(f => f !== "c_line_follower.ino")];
@@ -900,13 +931,20 @@ void loop() {
             combinedCode += `\n/* File: ${f} */\n` + filesObj[f] + "\n";
           }
 
-          // 2. Preprocess Arduino C++ into Javascript executable
-          let jsCode = this.transpileToJS(combinedCode);
+          let js = combinedCode.replace(/\/\*[\s\S]*?\*\//g, '');
+          js = js.replace(/#define\s+([A-Za-z_][A-Za-z0-9_]*)\s+(.+)$/gm, 'var $1 = $2;');
+          js = js.replace(/^(?:void|int|float|double|bool)\s+[A-Za-z_][A-Za-z0-9_]*\s*\([^;)]*\)\s*;/gm, '');
+          js = js.replace(/(?:int|float|double|bool|uint8_t|int16_t|uint16_t|long|unsigned\s+long)\s+([A-Za-z_])/g, 'var $1');
+          js = js.replace(/var\s+([A-Za-z_][A-Za-z0-9_]*)\s*\[[^\]]*\]\s*=\s*\{([^}]*)\}/g, 'var $1 = [$2]');
+          js = js.replace(/(?:void|int|float|double|bool)\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(([^)]*)\)\s*\{/g, function(match, name, args) {
+            let cleanArgs = args.split(',').map(arg => arg.trim().replace(/^(?:int|float|double|bool|uint8_t|int16_t|const|unsigned|long)\s+/, '').trim()).filter(Boolean).join(', ');
+            return `function ${name}(${cleanArgs}){`;
+          });
+          js = js.replace(/\(int\)\s*/g, 'Math.floor');
 
-          // 3. Wrap inside VM execution harness
           const factory = new Function('HAL', `
             with (HAL) {
-              ${jsCode}
+              ${js}
               return {
                 setup: typeof setup === 'function' ? setup : () => {},
                 loop: typeof loop === 'function' ? loop : () => {},
@@ -915,75 +953,41 @@ void loop() {
                   prevError: typeof prevError !== 'undefined' ? prevError : 0,
                   kp: typeof kp !== 'undefined' ? kp : 0,
                   kd: typeof kd !== 'undefined' ? kd : 0
-                })
+                }),
+                setTunables: (newKp, newKd, newLBase, newRBase, newSpin) => {
+                  if (typeof kp !== 'undefined') kp = newKp;
+                  if (typeof kd !== 'undefined') kd = newKd;
+                  if (typeof leftBaseSpeed !== 'undefined') leftBaseSpeed = newLBase;
+                  if (typeof rightBaseSpeed !== 'undefined') rightBaseSpeed = newRBase;
+                  if (typeof spinSpeed !== 'undefined') spinSpeed = newSpin;
+                }
               };
             }
           `);
 
           this.compiledHarness = factory;
-          this.errorState = null;
-          return { success: true, message: `Successfully compiled ${fileNames.length} sketch files.` };
+          return { success: true, message: `Compiled ${fileNames.length} sketch files successfully.` };
         } catch (err) {
-          this.errorState = err.message;
-          return { success: false, message: `Compilation Error: ${err.message}` };
+          return { success: false, message: err.message };
         }
-      }
-
-      transpileToJS(code) {
-        // Strip multi-line comments
-        let js = code.replace(/\/\*[\s\S]*?\*\//g, '');
-
-        // Transform #define X val into var X = val;
-        js = js.replace(/#define\s+([A-Za-z_][A-Za-z0-9_]*)\s+(.+)$/gm, 'var $1 = $2;');
-
-        // Remove C++ function prototypes (e.g., void wheel(int, int);)
-        js = js.replace(/^(?:void|int|float|double|bool)\s+[A-Za-z_][A-Za-z0-9_]*\s*\([^;)]*\)\s*;/gm, '');
-
-        // Remove C++ type declarations in variable declarations
-        // int a = 10, b = 20; -> var a = 10, b = 20;
-        js = js.replace(/(?:int|float|double|bool|uint8_t|int16_t|uint16_t|long|unsigned\s+long)\s+([A-Za-z_])/g, 'var $1');
-
-        // Transform arrays: const var sensorPins[NUM_SENSORS] = {...}; -> var sensorPins = [...];
-        js = js.replace(/var\s+([A-Za-z_][A-Za-z0-9_]*)\s*\[[^\]]*\]\s*=\s*\{([^}]*)\}/g, 'var $1 = [$2]');
-
-        // Function declarations: void func(...) -> function func(...)
-        js = js.replace(/(?:void|int|float|double|bool)\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(([^)]*)\)\s*\{/g, function(match, name, args) {
-          let cleanArgs = args.split(',').map(arg => {
-            return arg.trim().replace(/^(?:int|float|double|bool|uint8_t|int16_t|const|unsigned|long)\s+/, '').trim();
-          }).filter(Boolean).join(', ');
-          return `function ${name}(${cleanArgs}){`;
-        });
-
-        // Arduino types in casts: (int)x -> Math.floor(x)
-        js = js.replace(/\(int\)\s*/g, 'Math.floor');
-
-        return js;
       }
 
       initHAL(robotState, sensorReader) {
         const self = this;
         return {
-          // Hardware Pin Functions
           pinMode: (pin, mode) => { self.pinModes[pin] = mode; },
           digitalWrite: (pin, val) => {
             self.digitalPins[pin] = (val === 1 || val === true || val === 'HIGH') ? 1 : 0;
           },
-          digitalRead: (pin) => {
-            // Read from physical simulator sensor pins
-            return sensorReader.readDigital(pin);
-          },
+          digitalRead: (pin) => sensorReader.readDigital(pin),
           analogWrite: (pin, val) => {
             self.pwmPins[pin] = Math.max(0, Math.min(255, Math.round(val)));
           },
-          analogRead: (pin) => {
-            return sensorReader.readAnalog(pin);
-          },
-          // Time functions
-          delay: (ms) => { /* Virtual non-blocking cycle delay */ },
+          analogRead: (pin) => sensorReader.readAnalog(pin),
+          delay: (ms) => {},
           delayMicroseconds: (us) => {},
           millis: () => Math.round(performance.now()),
           micros: () => Math.round(performance.now() * 1000),
-          // Math functions
           constrain: (x, a, b) => Math.max(a, Math.min(b, x)),
           abs: (x) => Math.abs(x),
           min: (a, b) => Math.min(a, b),
@@ -991,13 +995,11 @@ void loop() {
           map: (x, in_min, in_max, out_min, out_max) => (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min,
           sq: (x) => x * x,
           sqrt: (x) => Math.sqrt(x),
-          // Pin Constants
           INPUT: 0, OUTPUT: 1, INPUT_PULLUP: 2,
           HIGH: 1, LOW: 0,
           A0: "A0", A1: "A1", A2: "A2", A3: "A3", A4: "A4", A5: "A5", A6: "A6", A7: "A7",
-          // Serial Monitor Output
           Serial: {
-            begin: (baud) => { self.logSerial(`[Serial] Baud ${baud} initialized.`); },
+            begin: (baud) => { self.logSerial(`[Serial] Baud ${baud} ready.`); },
             print: (txt) => { self.logSerial(txt, false); },
             println: (txt) => { self.logSerial(txt, true); }
           }
@@ -1014,97 +1016,96 @@ void loop() {
 
     const virtualArduino = new VirtualArduinoEngine();
 
-    // =========================================================================
-    // 4. SIMULATION ENVIRONMENT, CANVAS & 2D PHYSICS
-    // =========================================================================
+    // --- CANVAS, TRACKS & PHYSICS SIMULATION ---
     const canvas = document.getElementById('simCanvas');
     const ctx = canvas.getContext('2d');
 
     let isRunning = true;
     let simSpeedMultiplier = 1.0;
     let activeTrackType = 'circuit';
+    let trackContrast = 'black-on-white'; // Default competition standard!
     let pathHistory = [];
     let isDrawingCustom = false;
     let customTrackSegments = [];
+    let isDraggingRobot = false;
+    let dragOffset = { x: 0, y: 0 };
 
-    // Track Geometry & Line Collision Offscreen Canvas
+    // Off-screen canvas for pixel collision
     const offscreen = document.createElement('canvas');
-    offscreen.width = 800;
-    offscreen.height = 560;
+    offscreen.width = 760;
+    offscreen.height = 520;
     const offCtx = offscreen.getContext('2d', { willReadFrequently: true });
-    let trackLineWidthPx = 20;
+    let trackLineWidthPx = 25; // 25mm competition standard
 
-    // Physical Robot State
     let robot = {
-      x: 150,
-      y: 130,
-      heading: 0, // Radians
+      x: 140,
+      y: 120,
+      heading: 0, // Radians (0 = facing East)
       leftSpeedPwm: 0,
       rightSpeedPwm: 0,
-      sensors: new Array(16).fill(false),
-      rawAnalog: new Array(16).fill(0)
+      sensors: new Array(16).fill(false)
     };
 
-    // Track Drawing
     function renderTrack(c) {
       c.save();
-      c.strokeStyle = '#f8fafc'; // White line
+      // Track line color: Jet Black #0f172a on white arena, or White #f8fafc on dark
+      c.strokeStyle = trackContrast === 'black-on-white' ? '#0f172a' : '#f8fafc';
       c.lineWidth = trackLineWidthPx;
       c.lineCap = 'round';
       c.lineJoin = 'round';
 
       if (activeTrackType === 'circuit') {
         c.beginPath();
-        c.moveTo(150, 130);
-        c.lineTo(650, 130);
-        c.arc(650, 230, 100, -Math.PI/2, Math.PI/2);
-        c.lineTo(500, 330);
-        c.arc(500, 420, 90, -Math.PI/2, Math.PI/2);
-        c.lineTo(250, 510);
-        c.arc(250, 390, 120, Math.PI/2, Math.PI);
-        c.lineTo(130, 250);
-        c.arc(150, 250, 120, Math.PI, 1.5 * Math.PI);
+        c.moveTo(140, 120);
+        c.lineTo(620, 120);
+        c.arc(620, 220, 100, -Math.PI/2, Math.PI/2);
+        c.lineTo(480, 320);
+        c.arc(480, 400, 80, -Math.PI/2, Math.PI/2);
+        c.lineTo(240, 480);
+        c.arc(240, 370, 110, Math.PI/2, Math.PI);
+        c.lineTo(130, 230);
+        c.arc(140, 230, 110, Math.PI, 1.5 * Math.PI);
         c.closePath();
         c.stroke();
       }
       else if (activeTrackType === 'figure8') {
         c.beginPath();
-        c.ellipse(270, 280, 160, 130, 0, 0, 2 * Math.PI);
+        c.ellipse(250, 260, 150, 120, 0, 0, 2 * Math.PI);
         c.stroke();
         c.beginPath();
-        c.ellipse(530, 280, 160, 130, 0, 0, 2 * Math.PI);
+        c.ellipse(510, 260, 150, 120, 0, 0, 2 * Math.PI);
         c.stroke();
       }
       else if (activeTrackType === 'sharp') {
         c.beginPath();
-        c.moveTo(120, 120);
-        c.lineTo(680, 120);
-        c.lineTo(680, 440);
-        c.lineTo(400, 440);
-        c.lineTo(400, 270);
-        c.lineTo(120, 270);
+        c.moveTo(110, 110);
+        c.lineTo(650, 110);
+        c.lineTo(650, 410);
+        c.lineTo(380, 410);
+        c.lineTo(380, 250);
+        c.lineTo(110, 250);
         c.closePath();
         c.stroke();
       }
       else if (activeTrackType === 'slalom') {
         c.beginPath();
-        c.moveTo(100, 280);
+        c.moveTo(80, 260);
         for (let i = 0; i < 5; i++) {
-          const cx = 160 + i * 120;
+          const cx = 140 + i * 115;
           const dir = (i % 2 === 0) ? -1 : 1;
-          c.quadraticCurveTo(cx, 280 + dir * 140, cx + 60, 280);
+          c.quadraticCurveTo(cx, 260 + dir * 130, cx + 60, 260);
         }
         c.stroke();
       }
       else if (activeTrackType === 'cross') {
         c.beginPath();
-        c.ellipse(400, 280, 220, 140, 0, 0, 2 * Math.PI);
+        c.ellipse(380, 260, 200, 130, 0, 0, 2 * Math.PI);
         c.stroke();
         c.beginPath();
-        c.moveTo(180, 280);
-        c.lineTo(620, 280);
-        c.moveTo(400, 140);
-        c.lineTo(400, 420);
+        c.moveTo(170, 260);
+        c.lineTo(590, 260);
+        c.moveTo(380, 125);
+        c.lineTo(380, 395);
         c.stroke();
       }
       else if (activeTrackType === 'custom') {
@@ -1122,30 +1123,36 @@ void loop() {
     }
 
     function updateOffscreenTrack() {
-      offCtx.fillStyle = '#000000';
+      // Offscreen canvas background
+      offCtx.fillStyle = trackContrast === 'black-on-white' ? '#ffffff' : '#000000';
       offCtx.fillRect(0, 0, offscreen.width, offscreen.height);
       renderTrack(offCtx);
     }
 
-    function isPointOnTrack(px, py) {
+    function isPointOnBlackLine(px, py) {
       if (px < 0 || px >= offscreen.width || py < 0 || py >= offscreen.height) return false;
-      const p = offCtx.getImageData(Math.floor(px), Math.floor(py), 1, 1).data;
-      return p[0] > 110; // White line
+      const pixel = offCtx.getImageData(Math.floor(px), Math.floor(py), 1, 1).data;
+      if (trackContrast === 'black-on-white') {
+        // Black line has low brightness (< 90)
+        return pixel[0] < 90;
+      } else {
+        // White line has high brightness (> 130)
+        return pixel[0] > 130;
+      }
     }
 
-    // Reset robot to starting position for active track
     function resetRobot() {
       pathHistory = [];
       if (activeTrackType === 'circuit') {
-        robot.x = 150; robot.y = 130; robot.heading = 0;
+        robot.x = 140; robot.y = 120; robot.heading = 0;
       } else if (activeTrackType === 'figure8') {
-        robot.x = 400; robot.y = 280; robot.heading = -Math.PI / 4;
+        robot.x = 380; robot.y = 260; robot.heading = -Math.PI / 4;
       } else if (activeTrackType === 'sharp') {
-        robot.x = 120; robot.y = 120; robot.heading = 0;
+        robot.x = 110; robot.y = 110; robot.heading = 0;
       } else if (activeTrackType === 'slalom') {
-        robot.x = 100; robot.y = 280; robot.heading = 0;
+        robot.x = 80; robot.y = 260; robot.heading = 0;
       } else if (activeTrackType === 'cross') {
-        robot.x = 180; robot.y = 280; robot.heading = 0;
+        robot.x = 170; robot.y = 260; robot.heading = 0;
       } else if (activeTrackType === 'custom' && customTrackSegments.length > 0) {
         robot.x = customTrackSegments[0].x;
         robot.y = customTrackSegments[0].y;
@@ -1155,13 +1162,12 @@ void loop() {
       robot.rightSpeedPwm = 0;
     }
 
-    // Sensor Raycast & Hardware Pin Reader Bridge
+    // Sensor Reader Bridge for Arduino sketch
     const sensorReader = {
       readDigital: (pinName) => {
-        // Map microcontroller pinName to which sensor in the array
         const idx = wiringMap.sensors.indexOf(String(pinName));
         if (idx !== -1 && idx < hardwareConfig.sensorCount) {
-          // Active LOW logic: Return LOW (0) if line detected, HIGH (1) if missed
+          // Active LOW: 0 means line detected (over black line)
           return robot.sensors[idx] ? 0 : 1;
         }
         return 1;
@@ -1169,45 +1175,42 @@ void loop() {
       readAnalog: (pinName) => {
         const idx = wiringMap.sensors.indexOf(String(pinName));
         if (idx !== -1 && idx < hardwareConfig.sensorCount) {
-          // Return analog reflectance: 0 on white, 1023 on black line
-          return robot.sensors[idx] ? 1000 : 80;
+          // 0 on white floor, 1000 over black tape
+          return robot.sensors[idx] ? 1000 : 50;
         }
         return 50;
       }
     };
 
-    // Calculate Physical Sensor Beam Positions
     function computeSensorPositions() {
       const count = hardwareConfig.sensorCount;
-      const pitchPx = hardwareConfig.sensorPitchMm * 0.45; // scale to canvas
+      const pitchPx = hardwareConfig.sensorPitchMm * 0.45;
       const forwardPx = hardwareConfig.sensorOffsetMm * 0.45;
       const totalSpanPx = (count - 1) * pitchPx;
 
       const sCenter_x = robot.x + forwardPx * Math.cos(robot.heading);
       const sCenter_y = robot.y + forwardPx * Math.sin(robot.heading);
 
-      // Normal vector pointing left
       const norm_x = -Math.sin(robot.heading);
       const norm_y = Math.cos(robot.heading);
 
       const positions = [];
       for (let i = 0; i < count; i++) {
-        // Sensor 0 on Left, Sensor (count-1) on Right
         const frac = count > 1 ? i / (count - 1) : 0.5;
         const offset = (totalSpanPx / 2.0) - frac * totalSpanPx;
         const sx = sCenter_x + offset * norm_x;
         const sy = sCenter_y + offset * norm_y;
 
-        const onLine = isPointOnTrack(sx, sy);
-        robot.sensors[i] = onLine;
-        positions.push({ x: sx, y: sy, onLine: onLine });
+        const onBlackLine = isPointOnBlackLine(sx, sy);
+        robot.sensors[i] = onBlackLine;
+        positions.push({ x: sx, y: sy, onLine: onBlackLine });
       }
       return { positions, forwardPx, totalSpanPx };
     }
 
-    // Differential Drive Kinematics & Motor Bridge
     function updatePhysics(dt) {
-      // 1. Read virtual microcontroller outputs mapped to motor driver
+      if (isDraggingRobot) return;
+
       const inA_val = virtualArduino.digitalPins[wiringMap.inA] || 0;
       const inB_val = virtualArduino.digitalPins[wiringMap.inB] || 0;
       const inC_val = virtualArduino.digitalPins[wiringMap.inC] || 0;
@@ -1215,40 +1218,35 @@ void loop() {
       const enA_pwm = virtualArduino.pwmPins[wiringMap.enA] || 0;
       const enB_pwm = virtualArduino.pwmPins[wiringMap.enB] || 0;
 
-      // Determine Left Motor Direction & Speed
       let leftDir = 0;
-      if (inC_val === 1 && inD_val === 0) leftDir = 1;      // Forward
-      else if (inC_val === 0 && inD_val === 1) leftDir = -1; // Reverse
+      if (inC_val === 1 && inD_val === 0) leftDir = 1;
+      else if (inC_val === 0 && inD_val === 1) leftDir = -1;
       const leftPwmSigned = leftDir * enB_pwm;
 
-      // Determine Right Motor Direction & Speed (Right motor uses inB=1, inA=0 for forward)
       let rightDir = 0;
-      if (inB_val === 1 && inA_val === 0) rightDir = 1;      // Forward
-      else if (inB_val === 0 && inA_val === 1) rightDir = -1; // Reverse
+      if (inB_val === 1 && inA_val === 0) rightDir = 1;
+      else if (inB_val === 0 && inA_val === 1) rightDir = -1;
       const rightPwmSigned = rightDir * enA_pwm;
 
       robot.leftSpeedPwm = leftPwmSigned;
       robot.rightSpeedPwm = rightPwmSigned;
 
-      // Effective battery voltage factor (scales motor rotational speed)
       const driverDrop = driverDefinitions[hardwareConfig.driver].drop;
       const effectiveVolt = Math.max(0.5, hardwareConfig.batteryVolt - driverDrop);
-      const voltScale = effectiveVolt / 7.4; // 7.4V standard reference
+      const voltScale = effectiveVolt / 7.4;
 
-      // Convert PWM to linear velocity (m/s translated to canvas px/s)
-      const maxWheelSpeedPx = 180 * voltScale;
+      const maxWheelSpeedPx = 175 * voltScale;
       const vL = (leftPwmSigned / 255.0) * maxWheelSpeedPx;
       const vR = (rightPwmSigned / 255.0) * maxWheelSpeedPx;
 
-      const wheelbasePx = hardwareConfig.wheelbaseMm * 0.45;
+      const wbPx = hardwareConfig.wheelbaseMm * 0.45;
       const v = (vR + vL) / 2.0;
-      const omega = (vR - vL) / wheelbasePx;
+      const omega = (vR - vL) / wbPx;
 
       robot.x += v * Math.cos(robot.heading) * dt;
       robot.y += v * Math.sin(robot.heading) * dt;
       robot.heading += omega * dt;
 
-      // Keep inside arena boundary
       robot.x = Math.max(15, Math.min(canvas.width - 15, robot.x));
       robot.y = Math.max(15, Math.min(canvas.height - 15, robot.y));
 
@@ -1256,12 +1254,15 @@ void loop() {
       if (pathHistory.length > 500) pathHistory.shift();
     }
 
-    // Render Canvas Scene
     function renderSimulation() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // 1. Arena Floor Grid
-      ctx.strokeStyle = '#131b2e';
+      // 1. Realistic Competition Arena Surface (Clean off-white flex sheet)
+      ctx.fillStyle = trackContrast === 'black-on-white' ? '#f8fafc' : '#0f172a';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Subtle 50mm grid lines
+      ctx.strokeStyle = trackContrast === 'black-on-white' ? '#e2e8f0' : '#1e293b';
       ctx.lineWidth = 1;
       for (let x = 0; x < canvas.width; x += 40) {
         ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
@@ -1270,13 +1271,13 @@ void loop() {
         ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
       }
 
-      // 2. Track Lines
+      // 2. Black Track Line
       renderTrack(ctx);
 
       // 3. Robot Breadcrumb Trail
       if (pathHistory.length > 1) {
         ctx.save();
-        ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
+        ctx.strokeStyle = 'rgba(2, 132, 199, 0.4)';
         ctx.lineWidth = 2.5;
         ctx.beginPath();
         ctx.moveTo(pathHistory[0].x, pathHistory[0].y);
@@ -1298,17 +1299,22 @@ void loop() {
       const wbPx = hardwareConfig.wheelbaseMm * 0.45;
       const bodyLenPx = 54;
 
-      // Chassis Body Rendering (according to CAD shape)
-      ctx.fillStyle = '#1e293b';
-      ctx.strokeStyle = '#38bdf8';
+      // Realistic Cast Shadow under robot
+      ctx.shadowColor = 'rgba(15, 23, 42, 0.18)';
+      ctx.shadowBlur = 12;
+      ctx.shadowOffsetY = 4;
+
+      // Chassis PCB
+      ctx.fillStyle = '#0f172a'; // Matte Dark Acrylic / Carbon Fiber
+      ctx.strokeStyle = '#0284c7';
       ctx.lineWidth = 2;
       ctx.beginPath();
 
       if (hardwareConfig.chassisShape === 'wedge') {
         ctx.moveTo(-bodyLenPx/2, -wbPx/2);
         ctx.lineTo(bodyLenPx/2, -wbPx/4);
-        ctx.lineTo(forwardPx - 6, -totalSpanPx/2 - 2);
-        ctx.lineTo(forwardPx - 6, totalSpanPx/2 + 2);
+        ctx.lineTo(forwardPx - 6, -totalSpanPx/2 - 3);
+        ctx.lineTo(forwardPx - 6, totalSpanPx/2 + 3);
         ctx.lineTo(bodyLenPx/2, wbPx/4);
         ctx.lineTo(-bodyLenPx/2, wbPx/2);
       } else if (hardwareConfig.chassisShape === 'rect') {
@@ -1322,7 +1328,9 @@ void loop() {
       ctx.fill();
       ctx.stroke();
 
-      // Heading Arrow
+      ctx.shadowColor = 'transparent';
+
+      // Heading Arrow Indicator
       ctx.fillStyle = '#38bdf8';
       ctx.beginPath();
       ctx.moveTo(16, 0); ctx.lineTo(6, -6); ctx.lineTo(6, 6);
@@ -1330,12 +1338,12 @@ void loop() {
       ctx.fill();
 
       // Drive Wheels
-      ctx.fillStyle = '#0f172a';
-      ctx.strokeStyle = '#64748b';
+      ctx.fillStyle = '#1e293b';
+      ctx.strokeStyle = '#475569';
       ctx.lineWidth = 1.5;
-      const wheelWidth = 7;
+      const wheelWidth = 8;
       const wheelLen = hardwareConfig.wheelDiamMm * 0.55;
-      // Left wheel (top in local coords)
+      // Left wheel (top)
       ctx.fillRect(-wheelLen/2, -wbPx/2 - wheelWidth, wheelLen, wheelWidth);
       ctx.strokeRect(-wheelLen/2, -wbPx/2 - wheelWidth, wheelLen, wheelWidth);
       // Right wheel (bottom)
@@ -1343,7 +1351,7 @@ void loop() {
       ctx.strokeRect(-wheelLen/2, wbPx/2, wheelLen, wheelWidth);
 
       // Sensor Bar Mount
-      ctx.strokeStyle = '#64748b';
+      ctx.strokeStyle = '#94a3b8';
       ctx.lineWidth = 3;
       ctx.beginPath();
       ctx.moveTo(bodyLenPx/2 - 6, 0);
@@ -1352,14 +1360,14 @@ void loop() {
 
       // Sensor Bar PCB
       ctx.fillStyle = '#0f172a';
-      ctx.strokeStyle = '#22c55e';
+      ctx.strokeStyle = '#10b981';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
       ctx.roundRect(forwardPx - 3, -totalSpanPx/2 - 6, 8, totalSpanPx + 12, 3);
       ctx.fill();
       ctx.stroke();
 
-      // Individual Sensor LEDs on Bar
+      // Individual Optical Sensor LEDs on Bar
       for (let i = 0; i < positions.length; i++) {
         const frac = positions.length > 1 ? i / (positions.length - 1) : 0.5;
         const sy = (totalSpanPx / 2.0) - frac * totalSpanPx;
@@ -1368,11 +1376,13 @@ void loop() {
         ctx.beginPath();
         ctx.arc(sx, sy, 2.5, 0, 2 * Math.PI);
         if (positions[i].onLine) {
-          ctx.fillStyle = '#4ade80';
-          ctx.shadowColor = '#22c55e';
+          // Detected Black line: Glow Vibrant Green
+          ctx.fillStyle = '#10b981';
+          ctx.shadowColor = '#059669';
           ctx.shadowBlur = 8;
         } else {
-          ctx.fillStyle = '#dc2626';
+          // White floor: Dark Red/Grey
+          ctx.fillStyle = '#ef4444';
           ctx.shadowBlur = 0;
         }
         ctx.fill();
@@ -1381,9 +1391,7 @@ void loop() {
       ctx.restore();
     }
 
-    // UI Telemetry Update
     function updateTelemetryHUD() {
-      // Sensor Matrix Display
       const count = hardwareConfig.sensorCount;
       const matrix = document.getElementById('sensorMatrixDisplay');
       if (matrix.children.length !== count) {
@@ -1392,8 +1400,8 @@ void loop() {
         for (let i = 0; i < count; i++) {
           const el = document.createElement('div');
           el.id = `sensor-box-${i}`;
-          el.className = 'flex flex-col items-center justify-center p-1 rounded font-mono text-[10px] font-bold bg-slate-900 border border-slate-800 text-slate-500';
-          el.innerHTML = `<span>S${i}</span><span class="w-2 h-2 rounded-full mt-1 bg-slate-700"></span>`;
+          el.className = 'flex flex-col items-center justify-center p-1 rounded font-mono text-[10px] font-bold bg-white border border-slate-200 text-slate-400';
+          el.innerHTML = `<span>S${i}</span><span class="w-2 h-2 rounded-full mt-1 bg-slate-300"></span>`;
           matrix.appendChild(el);
         }
       }
@@ -1403,45 +1411,36 @@ void loop() {
         const el = document.getElementById(`sensor-box-${i}`);
         if (el) {
           el.className = `flex flex-col items-center justify-center p-1 rounded font-mono text-[10px] font-bold ${
-            active ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-slate-900 border border-slate-800 text-slate-500'
+            active ? 'bg-emerald-50 text-emerald-800 border border-emerald-300' : 'bg-white border border-slate-200 text-slate-400'
           }`;
           const dot = el.querySelector('span:last-child');
-          if (dot) dot.className = `w-2 h-2 rounded-full mt-1 ${active ? 'bg-emerald-400 animate-ping' : 'bg-slate-700'}`;
+          if (dot) dot.className = `w-2 h-2 rounded-full mt-1 ${active ? 'bg-emerald-500 animate-ping' : 'bg-slate-300'}`;
         }
       }
 
-      // Motor status
       document.getElementById('hudLeftPwm').textContent = robot.leftSpeedPwm;
       document.getElementById('hudRightPwm').textContent = robot.rightSpeedPwm;
 
-      const lPct = Math.min(100, Math.round((Math.abs(robot.leftSpeedPwm) / 255) * 100));
-      const rPct = Math.min(100, Math.round((Math.abs(robot.rightSpeedPwm) / 255) * 100));
-      document.getElementById('leftMotorBar').style.width = lPct + '%';
-      document.getElementById('rightMotorBar').style.width = rPct + '%';
+      const vars = virtualArduino.runtimeHarness ? virtualArduino.runtimeHarness.getVariables() : {};
+      document.getElementById('hudError').textContent = (vars.prevError !== undefined) ? vars.prevError : 0;
 
-      document.getElementById('leftMotorDir').textContent = robot.leftSpeedPwm >= 0 ? 'FORWARD' : 'REVERSE';
-      document.getElementById('rightMotorDir').textContent = robot.rightSpeedPwm >= 0 ? 'FORWARD' : 'REVERSE';
-
-      // Status badges
       const anySensorActive = robot.sensors.slice(0, count).some(Boolean);
       const statusBadge = document.getElementById('badgeStatus');
       if (anySensorActive) {
-        statusBadge.textContent = 'TRACKING';
-        statusBadge.className = 'px-2.5 py-1 rounded-md text-[11px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 backdrop-blur';
+        statusBadge.textContent = 'ON TRACK';
+        statusBadge.className = 'px-2.5 py-0.5 rounded-full text-[11px] font-mono font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200';
       } else {
-        statusBadge.textContent = 'LINE LOST (RECOVERY)';
-        statusBadge.className = 'px-2.5 py-1 rounded-md text-[11px] font-mono font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30 backdrop-blur animate-pulse';
+        statusBadge.textContent = 'LINE LOST (SPINNING)';
+        statusBadge.className = 'px-2.5 py-0.5 rounded-full text-[11px] font-mono font-semibold bg-rose-100 text-rose-800 border border-rose-200 animate-pulse';
       }
     }
 
-    // Main Execution Loop
     let lastSimTime = performance.now();
     function mainSimCycle(now) {
       const dt = Math.min((now - lastSimTime) / 1000.0, 0.05);
       lastSimTime = now;
 
-      if (isRunning && virtualArduino.runtimeHarness) {
-        // Run Arduino virtual sub-steps
+      if (isRunning && virtualArduino.runtimeHarness && !isDraggingRobot) {
         const subSteps = 4;
         const subDt = (dt * simSpeedMultiplier) / subSteps;
         for (let s = 0; s < subSteps; s++) {
@@ -1460,28 +1459,81 @@ void loop() {
       requestAnimationFrame(mainSimCycle);
     }
 
-    // =========================================================================
-    // 5. USER INTERFACE INTERACTION & CONTROLLERS
-    // =========================================================================
+    // --- INTERACTIVE DRAG & DROP OF ROBOT ---
+    canvas.addEventListener('mousedown', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const clickX = (e.clientX - rect.left) * (canvas.width / rect.width);
+      const clickY = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+      if (activeTrackType === 'custom') {
+        isDrawingCustom = true;
+        customTrackSegments = [{ x: clickX, y: clickY }];
+        robot.x = clickX; robot.y = clickY; robot.heading = 0;
+        updateOffscreenTrack();
+        return;
+      }
+
+      // Check distance to robot center
+      const dist = Math.hypot(clickX - robot.x, clickY - robot.y);
+      if (dist < 35) {
+        isDraggingRobot = true;
+        dragOffset.x = clickX - robot.x;
+        dragOffset.y = clickY - robot.y;
+      }
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = (e.clientX - rect.left) * (canvas.width / rect.width);
+      const mouseY = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+      if (isDrawingCustom && activeTrackType === 'custom') {
+        customTrackSegments.push({ x: mouseX, y: mouseY });
+        updateOffscreenTrack();
+        return;
+      }
+
+      if (isDraggingRobot) {
+        robot.x = mouseX - dragOffset.x;
+        robot.y = mouseY - dragOffset.y;
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      isDraggingRobot = false;
+      if (isDrawingCustom) {
+        isDrawingCustom = false;
+        updateOffscreenTrack();
+      }
+    });
+
+    // Scroll wheel over canvas to rotate robot
+    canvas.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      robot.heading += e.deltaY > 0 ? 0.15 : -0.15;
+    }, { passive: false });
+
+    // Snap to line button
+    document.getElementById('btnSnapLine').addEventListener('click', resetRobot);
+    document.getElementById('btnClearTrail').addEventListener('click', () => { pathHistory = []; });
+
+    // --- CONTROLLERS & EVENT LISTENERS ---
 
     // Tab Navigation
-    document.querySelectorAll('.nav-tab').forEach(tab => {
-      tab.addEventListener('click', () => {
-        document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('tab-active'));
-        document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
 
-        tab.classList.add('tab-active');
-        const targetId = tab.dataset.target;
-        const panel = document.getElementById(targetId);
-        if (panel) panel.classList.remove('hidden');
+        btn.classList.add('active');
+        const target = document.getElementById(btn.dataset.panel);
+        if (target) target.classList.remove('hidden');
 
-        if (targetId === 'panel-ide') {
-          updateLineNumbers();
-        }
+        if (btn.dataset.panel === 'panel-ide') updateLineNumbers();
       });
     });
 
-    // Play / Pause / Step / Reset Controls
+    // Playback buttons
     document.getElementById('btnPlayPause').addEventListener('click', () => {
       isRunning = !isRunning;
       document.getElementById('playPauseText').textContent = isRunning ? 'Pause' : 'Resume';
@@ -1501,16 +1553,69 @@ void loop() {
     });
 
     document.getElementById('btnResetRobot').addEventListener('click', resetRobot);
-    document.getElementById('btnCenterRobot').addEventListener('click', resetRobot);
-    document.getElementById('btnClearPath').addEventListener('click', () => { pathHistory = []; });
 
     document.getElementById('simSpeedSelect').addEventListener('change', (e) => {
       simSpeedMultiplier = parseFloat(e.target.value);
     });
 
-    // =========================================================================
-    // 6. MULTI-FILE IDE CONTROLLERS
-    // =========================================================================
+    // Live PID Tuning Sliders
+    function syncLiveTunables() {
+      const newKp = parseFloat(document.getElementById('liveKpSlider').value);
+      const newKd = parseFloat(document.getElementById('liveKdSlider').value);
+      const newLBase = parseInt(document.getElementById('liveBaseSpeedSlider').value);
+      const newRBase = newLBase + 10;
+      const newSpin = parseInt(document.getElementById('liveSpinSpeedSlider').value);
+
+      document.getElementById('liveKpVal').textContent = newKp.toFixed(1);
+      document.getElementById('liveKdVal').textContent = newKd.toFixed(1);
+      document.getElementById('liveBaseSpeedVal').textContent = `${newLBase} / ${newRBase}`;
+      document.getElementById('liveSpinSpeedVal').textContent = newSpin;
+
+      if (virtualArduino.runtimeHarness && virtualArduino.runtimeHarness.setTunables) {
+        virtualArduino.runtimeHarness.setTunables(newKp, newKd, newLBase, newRBase, newSpin);
+      }
+    }
+
+    document.getElementById('liveKpSlider').addEventListener('input', syncLiveTunables);
+    document.getElementById('liveKdSlider').addEventListener('input', syncLiveTunables);
+    document.getElementById('liveBaseSpeedSlider').addEventListener('input', syncLiveTunables);
+    document.getElementById('liveSpinSpeedSlider').addEventListener('input', syncLiveTunables);
+
+    // Track Studio
+    document.querySelectorAll('.track-card').forEach(card => {
+      card.addEventListener('click', () => {
+        document.querySelectorAll('.track-card').forEach(c => c.className = 'track-card p-3.5 rounded-xl bg-white border border-slate-200 text-left hover:border-slate-400 transition');
+        card.className = 'track-card p-3.5 rounded-xl bg-slate-50 border border-sky-500 text-left shadow-2xs transition';
+        activeTrackType = card.dataset.track;
+        updateOffscreenTrack();
+        resetRobot();
+      });
+    });
+
+    document.getElementById('trackWidthSlider').addEventListener('input', (e) => {
+      trackLineWidthPx = parseInt(e.target.value);
+      document.getElementById('trackWidthVal').textContent = `${trackLineWidthPx} mm`;
+      updateOffscreenTrack();
+    });
+
+    document.getElementById('trackColorSelect').addEventListener('change', (e) => {
+      trackContrast = e.target.value;
+      updateOffscreenTrack();
+    });
+
+    document.getElementById('btnStartCustomDraw').addEventListener('click', () => {
+      activeTrackType = 'custom';
+      customTrackSegments = [];
+      updateOffscreenTrack();
+      document.querySelector('[data-panel="panel-arena"]').click();
+    });
+
+    document.getElementById('btnClearCustomDraw').addEventListener('click', () => {
+      customTrackSegments = [];
+      updateOffscreenTrack();
+    });
+
+    // Multi-File IDE
     const ideTabsContainer = document.getElementById('ideFileTabs');
     const ideTextArea = document.getElementById('ideCodeArea');
     const ideLineNumbers = document.getElementById('ideLineNumbers');
@@ -1520,10 +1625,10 @@ void loop() {
       for (const fname of Object.keys(sketchFiles)) {
         const btn = document.createElement('button');
         const isActive = fname === currentActiveFile;
-        btn.className = `px-3 py-1 text-xs font-mono rounded-t-lg transition border-t border-x ${
+        btn.className = `px-3 py-1 text-xs font-mono rounded-lg transition border ${
           isActive 
-            ? 'bg-[#0e1320] text-sky-400 border-slate-700 font-bold' 
-            : 'bg-slate-900/50 text-slate-400 border-transparent hover:text-slate-200'
+            ? 'bg-white text-sky-700 border-slate-300 font-bold shadow-2xs' 
+            : 'bg-slate-100 text-slate-600 border-transparent hover:bg-slate-200'
         }`;
         btn.textContent = fname;
         btn.addEventListener('click', () => {
@@ -1563,7 +1668,6 @@ void loop() {
       ideLineNumbers.scrollTop = ideTextArea.scrollTop;
     });
 
-    // Compile & Flash Controller
     function flashCodeToRobot() {
       saveCurrentEditorContent();
       const res = virtualArduino.compile(sketchFiles);
@@ -1572,27 +1676,26 @@ void loop() {
 
       if (res.success) {
         status.textContent = 'Compiled & Flashed OK';
-        status.className = 'text-emerald-400 font-bold';
-        log.innerHTML = `<span class="text-emerald-400">✓ ${res.message}</span><br>Concatenated 5 files. Ready for execution.`;
+        status.className = 'text-emerald-700 font-bold';
+        log.innerHTML = `<span class="text-emerald-700">✓ ${res.message}</span><br>All 5 files linked. Virtual robot updated.`;
 
-        // Initialize HAL
         const hal = virtualArduino.initHAL(robot, sensorReader);
         virtualArduino.runtimeHarness = virtualArduino.compiledHarness(hal);
         virtualArduino.runtimeHarness.setup();
+        syncLiveTunables();
         virtualArduino.logSerial('[System] New sketch compiled and flashed.');
       } else {
-        status.textContent = 'Compilation Failed';
-        status.className = 'text-rose-400 font-bold';
-        log.innerHTML = `<span class="text-rose-400">✗ ${res.message}</span>`;
+        status.textContent = 'Compilation Error';
+        status.className = 'text-rose-700 font-bold';
+        log.innerHTML = `<span class="text-rose-700">✗ ${res.message}</span>`;
       }
     }
 
     document.getElementById('btnFlashCode').addEventListener('click', flashCodeToRobot);
     document.getElementById('btnCompileRun').addEventListener('click', flashCodeToRobot);
 
-    // New File
     document.getElementById('btnNewFile').addEventListener('click', () => {
-      const name = prompt('Enter new sketch filename (e.g. pid_controller.ino or config.h):', 'my_code.ino');
+      const name = prompt('Enter filename (e.g., config.h or tuning.ino):', 'tuning.ino');
       if (name && !sketchFiles[name]) {
         sketchFiles[name] = `// File: ${name}\n`;
         currentActiveFile = name;
@@ -1601,7 +1704,6 @@ void loop() {
       }
     });
 
-    // Upload File
     document.getElementById('btnUploadIno').addEventListener('click', () => {
       document.getElementById('fileUploadInput').click();
     });
@@ -1619,7 +1721,6 @@ void loop() {
       reader.readAsText(file);
     });
 
-    // Download/Export Files
     document.getElementById('btnExportFiles').addEventListener('click', () => {
       saveCurrentEditorContent();
       const blob = new Blob([sketchFiles[currentActiveFile]], { type: 'text/plain' });
@@ -1629,14 +1730,11 @@ void loop() {
       a.click();
     });
 
-    // Clear Serial Monitor
     document.getElementById('btnClearSerial').addEventListener('click', () => {
       document.getElementById('serialMonitorBox').innerHTML = '';
     });
 
-    // =========================================================================
-    // 7. WIRING CONNECTOR & PIN MATRIX UI
-    // =========================================================================
+    // --- WIRING & HARDWARE SETUP ---
     function populateWiringOptions() {
       const bDef = boardDefinitions[hardwareConfig.board];
       const pinOptions = [];
@@ -1649,7 +1747,6 @@ void loop() {
         pinOptions.push({ val: `A${i}`, label: `A${i} (Analog)`, isPwm: false });
       }
 
-      // Populate Motor Driver selects
       document.querySelectorAll('.wire-select').forEach(sel => {
         const sig = sel.dataset.signal;
         const currentVal = wiringMap[sig];
@@ -1661,25 +1758,21 @@ void loop() {
           if (p.val === currentVal) opt.selected = true;
           sel.appendChild(opt);
         });
-        sel.onchange = () => {
-          wiringMap[sig] = sel.value;
-          validatePwmPins();
-        };
+        sel.onchange = () => { wiringMap[sig] = sel.value; };
       });
 
-      // Populate Sensor array wires
       const sensorTableBody = document.getElementById('sensorWireRows');
       sensorTableBody.innerHTML = '';
       for (let i = 0; i < hardwareConfig.sensorCount; i++) {
         const tr = document.createElement('tr');
-        const posLabel = i === 0 ? 'Left Extreme (S0)' : (i === hardwareConfig.sensorCount - 1 ? 'Right Extreme' : `Inner S${i}`);
+        const posLabel = i === 0 ? 'Left Extreme (S0)' : (i === hardwareConfig.sensorCount - 1 ? 'Right Extreme' : `Sensor ${i}`);
         const currentPin = wiringMap.sensors[i] || String(i + 2);
 
         tr.innerHTML = `
-          <td class="p-2.5 text-white font-bold">Sensor ${i}</td>
-          <td class="p-2.5 text-slate-400">${posLabel}</td>
+          <td class="p-2.5 font-bold text-slate-900">Sensor ${i}</td>
+          <td class="p-2.5 text-slate-500">${posLabel}</td>
           <td class="p-2.5">
-            <select class="sensor-pin-select bg-slate-900 border border-slate-700 rounded px-2 py-1 text-emerald-400 outline-none" data-index="${i}">
+            <select class="sensor-pin-select bg-white border border-slate-300 rounded px-2 py-1 text-slate-800 outline-none" data-index="${i}">
               ${pinOptions.map(p => `<option value="${p.val}" ${p.val === currentPin ? 'selected' : ''}>${p.label}</option>`).join('')}
             </select>
           </td>
@@ -1693,15 +1786,6 @@ void loop() {
           wiringMap.sensors[idx] = sel.value;
         };
       });
-
-      validatePwmPins();
-    }
-
-    function validatePwmPins() {
-      const bDef = boardDefinitions[hardwareConfig.board];
-      const enA_pwm = bDef.pwm.includes(parseInt(wiringMap.enA));
-      const enB_pwm = bDef.pwm.includes(parseInt(wiringMap.enB));
-      document.getElementById('pwmWarningBox').classList.toggle('hidden', enA_pwm && enB_pwm);
     }
 
     document.getElementById('btnDefaultWiring').addEventListener('click', () => {
@@ -1712,32 +1796,24 @@ void loop() {
       populateWiringOptions();
     });
 
-    // =========================================================================
-    // 8. CAD & HARDWARE BUILDER UI CONTROLS
-    // =========================================================================
+    // Hardware CAD controls
     document.getElementById('cadBoardSelect').addEventListener('change', (e) => {
       hardwareConfig.board = e.target.value;
       const b = boardDefinitions[e.target.value];
-      document.getElementById('badgeBoard').textContent = `Board: ${b.name}`;
-      document.getElementById('boardSpecsCard').innerHTML = `
-        <div class="flex justify-between"><span>Digital I/O Pins:</span><span class="text-white font-bold">${b.digitalPins}</span></div>
-        <div class="flex justify-between"><span>Analog Pins:</span><span class="text-white font-bold">${b.analogPins}</span></div>
-        <div class="flex justify-between"><span>PWM Outputs:</span><span class="text-emerald-400 font-bold">${b.pwm.length} (${b.pwm.join(',')})</span></div>
-        <div class="flex justify-between"><span>Logic Voltage:</span><span class="text-white font-bold">${b.volt} V</span></div>
-      `;
+      document.getElementById('badgeBoard').textContent = `${b.name} (${b.volt}V)`;
       populateWiringOptions();
     });
 
     document.getElementById('cadSensorCount').addEventListener('change', (e) => {
       hardwareConfig.sensorCount = parseInt(e.target.value);
-      document.getElementById('sensorTypeBadge').textContent = `${hardwareConfig.sensorMode.toUpperCase()} (${hardwareConfig.sensorCount}ch)`;
+      document.getElementById('sensorModeBadge').textContent = `${hardwareConfig.sensorMode.toUpperCase()} (${hardwareConfig.sensorCount}ch)`;
       populateWiringOptions();
       updateHardwareSummary();
     });
 
     document.getElementById('cadSensorMode').addEventListener('change', (e) => {
       hardwareConfig.sensorMode = e.target.value;
-      document.getElementById('sensorTypeBadge').textContent = `${hardwareConfig.sensorMode.toUpperCase()} (${hardwareConfig.sensorCount}ch)`;
+      document.getElementById('sensorModeBadge').textContent = `${hardwareConfig.sensorMode.toUpperCase()} (${hardwareConfig.sensorCount}ch)`;
     });
 
     document.getElementById('cadPitchSlider').addEventListener('input', (e) => {
@@ -1753,13 +1829,6 @@ void loop() {
 
     document.getElementById('cadDriverSelect').addEventListener('change', (e) => {
       hardwareConfig.driver = e.target.value;
-      const d = driverDefinitions[e.target.value];
-      document.getElementById('statDriverDrop').textContent = `-${d.drop.toFixed(2)} V (${d.name.split(' ')[0]})`;
-      document.getElementById('driverSpecsCard').innerHTML = `
-        <div class="flex justify-between"><span>Technology:</span><span class="text-white font-bold">${d.tech}</span></div>
-        <div class="flex justify-between"><span>Internal V-Drop:</span><span class="text-rose-400 font-bold">-${d.drop.toFixed(2)} V</span></div>
-        <div class="flex justify-between"><span>Status:</span><span class="text-emerald-400 font-bold">Active</span></div>
-      `;
       updateBatteryCalculations();
     });
 
@@ -1783,11 +1852,8 @@ void loop() {
     function updateBatteryCalculations() {
       const drop = driverDefinitions[hardwareConfig.driver].drop;
       const eff = Math.max(0, hardwareConfig.batteryVolt - drop);
-      document.getElementById('statBattOutput').textContent = `${hardwareConfig.batteryVolt.toFixed(2)} V`;
       document.getElementById('badgeBattery').textContent = `${hardwareConfig.batteryVolt.toFixed(1)}V Battery`;
       document.getElementById('effectiveMotorVolt').textContent = `${eff.toFixed(2)} V`;
-      document.getElementById('leftMotorVolt').textContent = `${eff.toFixed(1)}V`;
-      document.getElementById('rightMotorVolt').textContent = `${eff.toFixed(1)}V`;
       updateHardwareSummary();
     }
 
@@ -1815,71 +1881,10 @@ void loop() {
     }
 
     document.getElementById('btnApplyHardware').addEventListener('click', () => {
-      document.querySelector('[data-target="panel-arena"]').click();
+      document.querySelector('[data-panel="panel-arena"]').click();
     });
 
-    // =========================================================================
-    // 9. TRACK STUDIO & CUSTOM MAP CONTROLLERS
-    // =========================================================================
-    document.querySelectorAll('.track-card').forEach(card => {
-      card.addEventListener('click', () => {
-        document.querySelectorAll('.track-card').forEach(c => c.className = 'track-card p-3 rounded-xl bg-[#090d16] border border-slate-800 text-left hover:border-slate-600 transition');
-        card.className = 'track-card p-3 rounded-xl bg-[#090d16] border border-sky-500/40 text-left hover:border-sky-400 transition shadow-lg shadow-sky-500/10';
-        activeTrackType = card.dataset.track;
-        updateOffscreenTrack();
-        resetRobot();
-      });
-    });
-
-    document.getElementById('trackWidthSlider').addEventListener('input', (e) => {
-      trackLineWidthPx = parseInt(e.target.value);
-      document.getElementById('trackWidthVal').textContent = `${trackLineWidthPx} mm`;
-      updateOffscreenTrack();
-    });
-
-    document.getElementById('btnStartCustomDraw').addEventListener('click', () => {
-      activeTrackType = 'custom';
-      customTrackSegments = [];
-      updateOffscreenTrack();
-      document.querySelector('[data-target="panel-arena"]').click();
-    });
-
-    document.getElementById('btnClearCustomDraw').addEventListener('click', () => {
-      customTrackSegments = [];
-      updateOffscreenTrack();
-    });
-
-    // Canvas Freehand Track Drawing
-    canvas.addEventListener('mousedown', (e) => {
-      if (activeTrackType !== 'custom') return;
-      isDrawingCustom = true;
-      const rect = canvas.getBoundingClientRect();
-      const x = (e.clientX - rect.left) * (canvas.width / rect.width);
-      const y = (e.clientY - rect.top) * (canvas.height / rect.height);
-      customTrackSegments = [{ x, y }];
-      robot.x = x; robot.y = y; robot.heading = 0;
-      updateOffscreenTrack();
-    });
-
-    canvas.addEventListener('mousemove', (e) => {
-      if (!isDrawingCustom || activeTrackType !== 'custom') return;
-      const rect = canvas.getBoundingClientRect();
-      const x = (e.clientX - rect.left) * (canvas.width / rect.width);
-      const y = (e.clientY - rect.top) * (canvas.height / rect.height);
-      customTrackSegments.push({ x, y });
-      updateOffscreenTrack();
-    });
-
-    window.addEventListener('mouseup', () => {
-      if (isDrawingCustom) {
-        isDrawingCustom = false;
-        updateOffscreenTrack();
-      }
-    });
-
-    // =========================================================================
-    // 10. INITIALIZATION SEQUENCE
-    // =========================================================================
+    // --- INITIALIZE APPLICATION ---
     renderIdeTabs();
     loadActiveFileContent();
     populateWiringOptions();
